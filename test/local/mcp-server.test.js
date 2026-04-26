@@ -28,6 +28,9 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-9;]*m/g
+
 describe('MCP Server in stdio mode', () => {
   let client
   let transport
@@ -95,12 +98,13 @@ describe('MCP Server in stdio mode', () => {
     test('When server starts with custom PORT, then it logs the correct port', () => {
       const serverPath = path.resolve(__dirname, '../../mcp-server.js')
       const result = spawnSync(process.execPath, [serverPath], {
-        env: { ...process.env, PORT: '4000', GCP_STDIO: 'true', CEP_LOG_LEVEL: 'info' },
+        env: { ...process.env, PORT: '4000', GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info' },
         timeout: 5000,
       })
 
       const output = result.stderr.toString() + result.stdout.toString()
-      assert.match(output, /Port:\s+4000/)
+      const cleanOutput = output.replace(ANSI_RE, '')
+      assert.match(cleanOutput, /Port:\s+4000/)
     })
 
     test('When server starts without PORT, then it assigns a random port', () => {
@@ -143,7 +147,8 @@ describe('MCP Server in stdio mode', () => {
       })
 
       const output = result.stderr.toString() + result.stdout.toString()
-      assert.match(output, /Data Access:\s+Fake Data/)
+      const cleanOutput = output.replace(ANSI_RE, '')
+      assert.match(cleanOutput, /Data access:\s+Fake/)
     })
   })
 })

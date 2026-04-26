@@ -40,6 +40,7 @@ import { checkGCP } from './lib/util/gcp.js'
 import { oauthMiddleware } from './lib/util/auth.js'
 import { featureFlags, FLAGS } from './lib/util/feature_flags.js'
 import { logger } from './lib/util/logger.js'
+import { printBanner, dim } from './lib/util/banner.js'
 import { TAGS, SCOPES, BEARER_METHODS_SUPPORTED, RESPONSE_TYPES_SUPPORTED, OAUTH_ISSUER } from './lib/constants.js'
 
 // Import Real Clients
@@ -148,6 +149,10 @@ async function main() {
     const gcpInfo = await checkGCP()
     const isStdio = shouldStartStdio(gcpInfo)
 
+    if (isStdio) {
+      makeLoggingCompatibleWithStdio()
+    }
+
     // Log all enabled feature flags
     Object.values(FLAGS).forEach(flag => {
       if (featureFlags.isEnabled(flag)) {
@@ -165,24 +170,20 @@ async function main() {
       // Ignore or log
     }
 
-    const envStr = gcpInfo && gcpInfo.project ? 'GCP' : 'Local'
-    const transportStr = isStdio ? 'Stdio' : 'SSE/HTTP'
-    const portStr = process.env.PORT || '0'
-    const authStr = isStdio ? 'None' : 'OAuth'
-    const dataAccessStr = process.env.GOOGLE_API_ROOT_URL ? 'Fake Data' : 'Live Production Data'
-    const dbStr = `Default: lib/knowledge (${articleCount} articles)`
+    const activeExps =
+      Object.values(FLAGS)
+        .filter(flag => featureFlags.isEnabled(flag))
+        .join(', ') || 'None'
 
-    console.log(`------------------------------------------------------------`)
-    console.log(`Chrome Enterprise Premium MCP Server Starting`)
-    console.log(`------------------------------------------------------------`)
-    console.log(`Environment:        ${envStr}`)
-    console.log(`Transport Mode:     ${transportStr}`)
-    console.log(`Port:               ${portStr}`)
-    console.log(`Auth Strategy:      ${authStr}`)
-    console.log(`Data Access:        ${dataAccessStr}`)
-    console.log(`Knowledge DB:       ${dbStr}`)
-    featureFlags.logActive()
-    console.log(`------------------------------------------------------------`)
+    printBanner({
+      transport: isStdio ? 'Stdio' : ['SSE/HTTP', `(Port: ${process.env.PORT || '0'})`],
+      auth: isStdio ? ['None', '(Local channel)'] : ['OAuth', '(Enforced)'],
+      apiCreds: isStdio ? ['ADC', `(${process.env.USER || 'user'}@google.com)`] : ['Dynamic', '(End-user credentials)'],
+      scopes: isStdio ? '🟢 All valid' : 'Checked per request',
+      dataAccess: process.env.GOOGLE_API_ROOT_URL ? 'Fake' : 'Production',
+      knowledge: ['lib/knowledge', `(${articleCount} articles)`],
+    })
+    console.log(dim(`Active Experiments: ${activeExps}`))
 
     // Maintain session state globally for all server connections
     const sharedSessionState = {
@@ -193,7 +194,6 @@ async function main() {
     }
 
     if (isStdio) {
-      makeLoggingCompatibleWithStdio()
       const stdioTransport = new StdioServerTransport()
       const server = await getServer(gcpInfo, sharedSessionState)
       await server.connect(stdioTransport)
@@ -230,7 +230,7 @@ async function main() {
         }
       })
 
-      app.get('/mcp', async (req, res) => {
+      app.get('/mcp', async (_req, res) => {
         logger.info(`${TAGS.MCP} Received GET MCP request`)
         res.writeHead(405).end(
           JSON.stringify({
@@ -243,7 +243,7 @@ async function main() {
 
       const sseTransports = {}
 
-      const getOAuthProtectedResource = (req, res) => {
+      const getOAuthProtectedResource = (_req, res) => {
         res.json({
           resource: process.env.OAUTH_PROTECTED_RESOURCE,
           authorization_servers: [process.env.OAUTH_AUTHORIZATION_SERVER],
@@ -252,7 +252,7 @@ async function main() {
         })
       }
 
-      const getOAuthAuthorizationServer = (req, res) => {
+      const getOAuthAuthorizationServer = (_req, res) => {
         res.json({
           issuer: OAUTH_ISSUER,
           authorization_endpoint: process.env.OAUTH_AUTHORIZATION_ENDPOINT,
@@ -265,7 +265,7 @@ async function main() {
       app.get('/.well-known/oauth-protected-resource', getOAuthProtectedResource)
       app.get('/.well-known/oauth-authorization-server', getOAuthAuthorizationServer)
 
-      app.get('/sse', async (req, res) => {
+      app.get('/sse', async (_req, res) => {
         logger.info(`${TAGS.MCP} /sse Received request`)
         const server = await getServer(gcpInfo, sharedSessionState)
         const transport = new SSEServerTransport('/messages', res)
