@@ -139,6 +139,20 @@ Rules included:
                 success: true,
               })
             } catch (error) {
+              // Rethrow auth errors to let them bubble up to guardedToolCall
+              const errorMessage = error.message || ''
+              const status = error.status || error.code || error.response?.status
+              const isAuthError =
+                status === 401 ||
+                status === 403 ||
+                errorMessage.includes('UNAUTHENTICATED') ||
+                errorMessage.includes('PERMISSION_DENIED') ||
+                errorMessage.includes('invalid_grant')
+
+              if (isAuthError) {
+                throw error
+              }
+
               let errorMsg = error.message
               if (
                 errorMsg.includes('already exists') ||

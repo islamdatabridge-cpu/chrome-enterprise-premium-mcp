@@ -275,13 +275,10 @@ describe('diagnose_environment', () => {
     })
   })
 
-  describe('Error Resilience', () => {
-    test('When API errors occur, then they are handled gracefully and issues are still reported', async () => {
+  describe('Error Handling', () => {
+    test('When non-auth API errors occur, then they propagate and return error response', async () => {
       const clients = createMockClients()
       clients.cloudIdentityClient.listDlpRules = mock.fn(async () => {
-        throw new Error('API down')
-      })
-      clients.cloudIdentityClient.listDetectors = mock.fn(async () => {
         throw new Error('API down')
       })
 
@@ -294,8 +291,29 @@ describe('diagnose_environment', () => {
       registerDiagnoseEnvironmentTool(server, clients, { customerId: null, cachedRootOrgUnitId: null })
 
       const result = await handlers['diagnose_environment']({ customerId: 'C0123' }, { requestInfo: {} })
-      assert.ok(result.structuredContent.issues, 'Should still return issues')
-      assert.ok(result.structuredContent.dlpRules.total === 0, 'DLP rules should be 0 on error')
+      assert.strictEqual(result.isError, true)
+      assert.ok(result.content[0].text.includes('Error: API down'))
+    })
+
+    test('When authentication errors occur, then it returns remediation instructions', async () => {
+      const clients = createMockClients()
+      clients.cloudIdentityClient.listDlpRules = mock.fn(async () => {
+        const err = new Error('UNAUTHENTICATED')
+        err.status = 401
+        throw err
+      })
+
+      const handlers = {}
+      const server = {
+        registerTool: mock.fn((name, _desc, handler) => {
+          handlers[name] = handler
+        }),
+      }
+      registerDiagnoseEnvironmentTool(server, clients, { customerId: null, cachedRootOrgUnitId: null })
+
+      const result = await handlers['diagnose_environment']({ customerId: 'C0123' }, { requestInfo: {} })
+      assert.strictEqual(result.isError, true)
+      assert.ok(result.content[0].text.includes('Authentication required'))
     })
 
     test('When org units list is empty, then it is handled gracefully', async () => {
