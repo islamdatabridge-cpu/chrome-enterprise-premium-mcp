@@ -165,12 +165,12 @@ async function fetchEnvironment(
 ) {
   const [customerData, orgUnitsData, subscriptionData, dlpPolicies, detectorPolicies, browserVersions] =
     await Promise.all([
-      adminSdkClient.getCustomerId(authToken).catch(e => ({ error: e.message })),
-      adminSdkClient.listOrgUnits({ customerId }, authToken).catch(e => ({ error: e.message })),
-      adminSdkClient.checkCepSubscription(customerId, authToken).catch(e => ({ error: e.message })),
-      cloudIdentityClient.listDlpRules(authToken).catch(() => []),
-      cloudIdentityClient.listDetectors(authToken).catch(() => []),
-      chromeManagementClient.countBrowserVersions(customerId, null, authToken).catch(() => []),
+      adminSdkClient.getCustomerId(authToken),
+      adminSdkClient.listOrgUnits({ customerId }, authToken),
+      adminSdkClient.checkCepSubscription(customerId, authToken),
+      cloudIdentityClient.listDlpRules(authToken),
+      cloudIdentityClient.listDetectors(authToken),
+      chromeManagementClient.countBrowserVersions(customerId, null, authToken),
     ])
 
   const orgUnits = orgUnitsData?.organizationUnits || []

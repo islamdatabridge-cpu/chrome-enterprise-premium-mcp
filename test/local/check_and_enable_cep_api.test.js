@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import assert from 'node:assert/strict'
 import { describe, test, mock, beforeEach } from 'node:test'
-import assert from 'node:assert'
 import { registerCheckAndEnableCepApiTool } from '../../tools/definitions/check_and_enable_cep_api.js'
 
-describe('check_and_enable_cep_api tool description', () => {
+describe('check_and_enable_cep_api Tool', () => {
   let server
 
-  beforeEach(() => {
+  beforeEach(async () => {
     server = {
       registerTool: mock.fn(),
     }
@@ -45,5 +45,34 @@ describe('check_and_enable_cep_api tool description', () => {
         'Always ask the user before enabling APIs unless they have explicitly authorized it in this turn.',
       ),
     )
+  })
+
+  test('When authentication errors occur, then it returns remediation instructions', async () => {
+    const mockGetServiceStatus = mock.fn(async () => {
+      const err = new Error('UNAUTHENTICATED')
+      err.status = 401
+      throw err
+    })
+
+    const serviceUsageClient = {
+      getServiceStatus: mockGetServiceStatus,
+    }
+
+    const state = { customerId: null }
+    registerCheckAndEnableCepApiTool(server, { serviceUsageClient }, state)
+
+    const handler = server.registerTool.mock.calls.find(call => call.arguments[0] === 'check_and_enable_cep_api')
+      .arguments[2]
+
+    const result = await handler(
+      {
+        projectId: 'project1',
+        checkAll: false,
+      },
+      { requestInfo: {} },
+    )
+
+    assert.strictEqual(result.isError, true)
+    assert.ok(result.content[0].text.includes('Authentication required'))
   })
 })

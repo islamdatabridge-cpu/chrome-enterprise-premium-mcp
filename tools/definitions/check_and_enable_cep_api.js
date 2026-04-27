@@ -97,6 +97,24 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
               }
             } catch (error) {
               const errorMessage = error.message || ''
+
+              // Rethrow auth errors to let them bubble up to guardedToolCall
+              const status = error.status || error.code || error.response?.status
+              const isAuthError =
+                status === 401 ||
+                status === 403 ||
+                errorMessage.includes('UNAUTHENTICATED') ||
+                errorMessage.includes('PERMISSION_DENIED') ||
+                errorMessage.includes('invalid_grant')
+
+              if (
+                isAuthError &&
+                !errorMessage.includes('serviceusage.googleapis.com') &&
+                !errorMessage.includes('Service Usage API')
+              ) {
+                throw error
+              }
+
               const isServiceUsageError =
                 error.status === 403 ||
                 errorMessage.includes('serviceusage.googleapis.com') ||

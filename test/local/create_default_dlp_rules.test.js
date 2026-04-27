@@ -154,4 +154,45 @@ describe('create_default_dlp_rules Tool', () => {
       result.content[0].text.includes('- **🤖 Audit visits to generative AI sites** — skipped (Already exists)'),
     )
   })
+
+  test('When authentication errors occur, then it bails and returns remediation instructions', async () => {
+    const mockCreateDlpRule = mock.fn(async () => {
+      const err = new Error('UNAUTHENTICATED')
+      err.status = 401
+      throw err
+    })
+    const MockCloudIdentityClient = class {
+      constructor() {
+        this.createDlpRule = mockCreateDlpRule
+      }
+    }
+
+    const { registerTools } = await esmock(
+      '../../tools/index.js',
+      {},
+      {
+        '../../lib/api/real_cloud_identity_client.js': {
+          RealCloudIdentityClient: MockCloudIdentityClient,
+        },
+      },
+    )
+    registerTools(server, {
+      gcpCredentialsAvailable: true,
+      apiClients: { cloudIdentity: new MockCloudIdentityClient() },
+    })
+
+    const handler = server.registerTool.mock.calls.find(call => call.arguments[0] === 'create_default_dlp_rules')
+      .arguments[2]
+
+    const result = await handler(
+      {
+        customerId: 'C0123',
+        orgUnitId: 'ou1',
+      },
+      { requestInfo: {} },
+    )
+
+    assert.strictEqual(result.isError, true)
+    assert.ok(result.content[0].text.includes('Authentication required'))
+  })
 })
