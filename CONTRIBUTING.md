@@ -27,11 +27,11 @@ This project follows
 
 If you encounter an issue, please file a GitHub issue with the following:
 
-1. **Generate a diagnostic report** — in your Gemini CLI session, use the `/bug`
-   command. This creates a diagnostic file with session logs and environment
-   details. Attach it to the issue.
+1. **Generate a diagnostic report.** In your Gemini CLI session, use the
+   `/bug` command. This creates a diagnostic file with session logs and
+   environment details. Attach it to the issue.
 
-2. **Run presubmit** — run `npm run presubmit` and include the output. This
+2. **Run presubmit.** Run `npm run presubmit` and include the output. This
    helps determine whether the issue is environmental or a code bug.
 
 3. **Describe what you expected** vs. what actually happened, including the
@@ -77,7 +77,20 @@ npm run test:integration:real # Integration tests against real Google APIs
 ### Linting and formatting
 
 ```bash
-npm run lint          # Check for errors
-npm run lint -- --fix # Auto-fix
-npm run format        # Prettier
+npm run lint          # Check for errors (read-only)
+npm run lint -- --fix # Auto-fix lint
+npm run format        # Auto-fix formatting (Prettier)
 ```
+
+`npm run presubmit` runs `prettier --check` and `eslint` in read-only mode;
+it will fail rather than auto-fix. The husky pre-commit hook fixes staged
+files via lint-staged on commit, so a clean working tree usually passes.
+
+### Continuous integration
+
+Pull requests trigger four parallel jobs on GitHub Actions: `lint`,
+`test-unit`, `test-integration-fake`, and `test-smoke`. Each maps to one of
+the `npm run` scripts above. Jobs run hermetically (no ADC), so any test
+that inadvertently reaches `getAuthClient()` fails fast with a named error
+instead of timing out on metadata-server discovery. The workflow is at
+[`.github/workflows/node.js.yml`](.github/workflows/node.js.yml).
