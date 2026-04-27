@@ -16,23 +16,35 @@ limitations under the License.
 
 # lib/api
 
-Google Cloud and Workspace API clients. Each API is wrapped behind a client
-abstraction so tools depend on interfaces and tests can swap in fakes without
-network calls.
+Google Cloud and Workspace API clients. Each API has an interface and a real
+implementation. Tools depend on the interface so we can run integration tests
+against an in-process fake without changing client code.
 
-## Client triad pattern
+## Client pattern
 
-Every API has three files:
+Every API has two files:
 
-- `interfaces/foo_client.js` — Abstract base class. Methods throw
-  `Error('Not implemented')`. Defines the contract that tools program against.
-- `real_foo_client.js` — Production implementation. Authenticates via ADC or a
-  passed-through OAuth token, calls the real Google API.
-- `fake_foo_client.js` — Test double. Returns canned responses and tracks calls.
-  Used by the fake API server in `test/helpers/fake-api-server.js`.
+- `interfaces/foo_client.js`: abstract base class. Methods throw
+  `Error('Not implemented')`. Tools program against the interface.
+- `real_foo_client.js`: production implementation. Authenticates via ADC or a
+  passed-through OAuth token, calls the live Google API.
 
-The server wires real or fake clients in `mcp-server.js` based on whether
-`GOOGLE_API_ROOT_URL` is set.
+There is no separate `fake_*_client.js` class. For tests, we instantiate the
+same `Real*Client` and redirect it at the fake API server in
+`test/helpers/fake-api-server.js`. The factory in
+`test/helpers/integration/tools/client_factory.js` does the wiring:
+
+```js
+// Real backend (production / postsubmit): no args, uses ADC.
+new RealAdminSdkClient()
+
+// Fake backend (presubmit): same class, redirected via rootUrl + a fake
+// OAuth client so getAuthClient() is never called.
+new RealAdminSdkClient({ rootUrl, auth: fakeAuth })
+```
+
+`mcp-server.js` uses the same trick: when `GOOGLE_API_ROOT_URL` is set, it
+passes `rootUrl` into each Real client.
 
 ## API domains
 
@@ -46,16 +58,28 @@ The server wires real or fake clients in `mcp-server.js` based on whether
 
 ## Legacy standalone wrappers
 
-The bare files (`admin_sdk.js`, `chromemanagement.js`, `chromepolicy.js`,
-`cloudidentity.js`) are earlier standalone implementations that predate the
-client abstraction. They are not imported anywhere and will be removed in a
-future cleanup.
+The bare files `admin_sdk.js`, `chromemanagement.js`, and `cloudidentity.js`
+are earlier standalone implementations that predate the client abstraction.
+Nothing imports them; they will be removed in a future cleanup.
+
+`chromepolicy.js` is in the same category but still has one live export:
+`ConnectorPolicyFilter` is imported by `tools/definitions/get_connector_policy.js`
+and `tools/definitions/diagnose_environment.js`. Move that constant out of
+`chromepolicy.js` (e.g., into `lib/constants.js` or the real client) before
+deleting the file.
 
 ## Adding a new API client
 
 1. Create `interfaces/new_client.js` with abstract methods.
-2. Create `real_new_client.js` implementing the interface with `googleapis` or
-   `@google-cloud/*`.
-3. Create `fake_new_client.js` returning canned data.
-4. Wire both into `mcp-server.js` (in the real/fake client blocks).
-5. Add the fake to `test/helpers/integration/tools/client_factory.js`.
+2. Create `real_new_client.js` that implements the interface using `googleapis`
+   or `@google-cloud/*`. Take an optional `apiOptions` argument and pass it
+   through to your client constructor so `rootUrl` and `auth` overrides work.
+3. Wire the new client into `mcp-server.js` (both the
+   `GOOGLE_API_ROOT_URL`-set and unset branches construct the same Real
+   clients).
+4. Add the new client to `getApiClients()` in
+   `test/helpers/integration/tools/client_factory.js`. Mirror the existing
+   pattern: instantiate with no args for the `real` branch, and with
+   `{ rootUrl, auth: fakeAuth }` for the `fake` branch.
+5. Add HTTP handlers for the new API to `test/helpers/fake-api-server.js` so
+   the fake backend can serve the requests your client will make.

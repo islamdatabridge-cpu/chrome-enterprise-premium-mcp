@@ -25,39 +25,39 @@ Every tool file exports a `registerXxxTool(server, options, sessionState)`
 function that calls `server.registerTool(name, schema, handler)`. The handler is
 wrapped with `guardedToolCall` from `utils/wrapper.js`, which provides:
 
-- **Automatic customer ID resolution** — if the tool needs a `customerId` and
-  one isn't provided, the wrapper calls `get_customer_id` and caches the result
-  in session state.
-- **Org unit normalization** — strips `id:` prefixes from org unit IDs.
-- **System prompt injection** — on the first tool call of a session, injects
+- **Automatic customer ID resolution:** if the tool needs a `customerId` and
+  one isn't provided, the wrapper calls `get_customer_id` and caches the
+  result in session state.
+- **Org unit normalization:** strips `id:` prefixes from org unit IDs.
+- **System prompt injection:** on the first tool call of a session, injects
   `prompts/system-prompt.md` and `lib/knowledge/0-agent-capabilities.md` into
   the response.
-- **Error handling** — catches and formats errors consistently.
-- **History tracking** — records each tool call in session state for
+- **Error handling:** catches and formats errors consistently.
+- **History tracking:** records each tool call in session state for
   diagnostics.
 
 ## Response format
 
 Tools return `formatToolResponse({ summary, data, structuredContent })`:
 
-- `summary` — Human-readable markdown shown to the user.
-- `data` — Fenced JSON block appended to the summary for structured detail.
-- `structuredContent` — Machine-readable JSON in the MCP `structuredContent`
+- `summary`: human-readable markdown shown to the user.
+- `data`: fenced JSON block appended to the summary for structured detail.
+- `structuredContent`: machine-readable JSON in the MCP `structuredContent`
   field.
 
 ## Tool groups
 
-| Group      | Tools                                                                                                       | API domain                     |
-| :--------- | :---------------------------------------------------------------------------------------------------------- | :----------------------------- |
-| Discovery  | get_customer_id, list_org_units, count_browser_versions, list_customer_profiles                             | Admin SDK, Chrome Management   |
-| Licensing  | check_cep_subscription, check_user_cep_license                                                              | Admin SDK (Licensing)          |
-| DLP        | list_dlp_rules, create_chrome_dlp_rule, delete_agent_dlp_rule, create_default_dlp_rules                     | Cloud Identity                 |
-| Detectors  | list_detectors, create_regex_detector, create_url_list_detector, create_word_list_detector, delete_detector | Cloud Identity                 |
-| Connectors | get_connector_policy, enable_chrome_enterprise_connectors                                                   | Chrome Policy                  |
-| Extensions | check_seb_extension_status, install_seb_extension                                                           | Chrome Policy                  |
-| Security   | get_chrome_activity_log, check_and_enable_cep_api                                                           | Admin SDK, Service Usage       |
-| Knowledge  | search_content, get_document, list_documents                                                                | Local knowledge base           |
-| Feedback   | cep_feedback                                                                                                | Local (writes diagnostic file) |
+| Group       | Tools                                                                                                       | API domain                   |
+| :---------- | :---------------------------------------------------------------------------------------------------------- | :--------------------------- |
+| Discovery   | get_customer_id, list_org_units, count_browser_versions, list_customer_profiles                             | Admin SDK, Chrome Management |
+| Licensing   | check_cep_subscription, check_user_cep_license                                                              | Admin SDK (Licensing)        |
+| DLP         | list_dlp_rules, get_dlp_rule, create_chrome_dlp_rule, delete_agent_dlp_rule, create_default_dlp_rules       | Cloud Identity               |
+| Detectors   | list_detectors, create_regex_detector, create_url_list_detector, create_word_list_detector, delete_detector | Cloud Identity               |
+| Connectors  | get_connector_policy, enable_chrome_enterprise_connectors                                                   | Chrome Policy                |
+| Extensions  | check_seb_extension_status, install_seb_extension                                                           | Chrome Policy                |
+| Security    | get_chrome_activity_log, check_and_enable_cep_api                                                           | Admin SDK, Service Usage     |
+| Diagnostics | diagnose_environment                                                                                        | Multi-API health check       |
+| Knowledge   | search_content, get_document, list_documents                                                                | Local knowledge base         |
 
 ## Feature-gated tools
 
@@ -66,9 +66,9 @@ Delete tools (`delete_agent_dlp_rule`, `delete_detector`) only register when
 
 ## Utilities (`utils/`)
 
-- `wrapper.js` — `guardedToolCall` and `formatToolResponse` (described above).
-- `org-unit.js` — Root org unit resolution with session caching.
-- `detector.js` — Shared helper for the three create-detector tools.
+- `wrapper.js`: `guardedToolCall` and `formatToolResponse` (described above).
+- `org-unit.js`: root org unit resolution with session caching.
+- `detector.js`: shared helper for the three create-detector tools.
 
 ## Shared schemas (`definitions/shared.js`)
 
