@@ -17,6 +17,10 @@ coverage/
 # Eval results
 results/
 eval_results*
+results*.json
+
+# Commit messages
+.commitmsg
 
 # Settings
 .gemini/
