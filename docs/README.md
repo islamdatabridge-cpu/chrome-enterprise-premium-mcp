@@ -21,8 +21,8 @@ Premium MCP server. The root [`README.md`](../README.md) covers installation
 and connecting an MCP client; these docs cover what you need after the server
 is running.
 
-- [`configuration.md`](./configuration.md): environment variables, stdio vs.
-  HTTP modes, OAuth setup.
+- [`configuration.md`](./configuration.md): environment variables and
+  stdio vs. HTTP transport.
 - [`troubleshooting.md`](./troubleshooting.md): auth, permissions, Node.js,
   and MCP client integration issues with fixes.
 - [`architecture.md`](./architecture.md): code layout, client abstraction,

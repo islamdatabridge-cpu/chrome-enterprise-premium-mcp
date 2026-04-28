@@ -16,18 +16,18 @@ limitations under the License.
 
 # test
 
-Tests are organized into tiers that run at different stages of the development
-workflow.
+We split tests across four directories by what each tier needs at runtime
+(network access, MCP harness, real Google APIs).
 
 ## Test tiers
 
-**`local/`** — The primary test suite. These run without network
-access, using in-process fakes or pure unit logic. Covers API client wrappers,
-tool behavior, CEL validation, auth, prompts, server lifecycle, and the eval
-infrastructure itself. Most new tests go here.
+**`local/`** — Primary suite. Tests in this directory run without network
+access, against in-process fakes or pure unit logic, covering the API
+clients, tool behavior, CEL validation, auth, prompts, server lifecycle,
+and the eval infrastructure itself. Most new tests go here.
 
-**`unit/`** — Isolated unit tests (currently feature flags, connector
-enablement). Strictly unit-level with no MCP harness or API mocking.
+**`unit/`** — Isolated unit tests for feature flags and connector
+enablement. They exercise pure functions directly without the MCP harness.
 
 **`integration/`** — End-to-end tests that exercise tools through the full MCP
 client/server harness. The `tools/` subdirectory contains lifecycle tests (rule

@@ -55,7 +55,6 @@ PORT=8080 GCP_STDIO=false npx -y @google/chrome-enterprise-premium-mcp@latest
 | `GCP_STDIO`                  | `true` for Stdio (local); `false` for HTTP (remote). | `true`  |
 | `PORT`                       | Network port when `GCP_STDIO=false`.                 | `0`     |
 | `GOOGLE_CLOUD_QUOTA_PROJECT` | GCP project ID for API quotas.                       | -       |
-| `OAUTH_ENABLED`              | Set `true` to require OAuth (HTTP mode only).        | `false` |
 | `LOG_LEVEL`                  | Verbosity (`error`, `warn`, `info`, `debug`).        | `info`  |
 
 > [!NOTE]
@@ -63,25 +62,9 @@ PORT=8080 GCP_STDIO=false npx -y @google/chrome-enterprise-premium-mcp@latest
 > random available port. The actual port is logged at startup, e.g.
 > `Chrome Enterprise Premium MCP server listening on port X`.
 
-## HTTP mode with OAuth
+## Authenticating to Google APIs
 
-The server supports HTTP transport with optional OAuth, useful for shared or
-remote deployments where multiple users connect to a single server instance.
-In this mode the MCP client (e.g., Gemini CLI) authenticates the end user via
-OAuth and passes their access token as a Bearer header. The server validates
-the token and uses it for Google API calls; ADC is not involved.
-
-```bash
-GCP_STDIO=false npx -y @google/chrome-enterprise-premium-mcp@latest
-```
-
-The server exposes `.well-known/oauth-protected-resource` and
-`.well-known/oauth-authorization-server` endpoints so clients can auto-discover
-the OAuth flow. See [`.env.example`](../.env.example) for the full set of
-OAuth variables.
-
-> **OAuth client status.** Today, OAuth requires you to bring your own
-> internal OAuth client. We are working on a Google-managed OAuth client
-> specifically for Chrome Enterprise Premium, but it is not yet available. If
-> you want the fastest path to a working setup, use ADC (the Quick Start in
-> the root README); OAuth is for production multi-user deployments.
+The server authenticates to Google APIs via Application Default Credentials
+(ADC), regardless of transport. Set ADC up using the Quick Start in the root
+[`README.md`](../README.md). The HTTP transport is unauthenticated at the
+network layer; bind it to a trusted interface only.

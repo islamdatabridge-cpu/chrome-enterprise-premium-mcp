@@ -26,12 +26,12 @@ Every API has two files:
 
 - `interfaces/foo_client.js`: abstract base class. Methods throw
   `Error('Not implemented')`. Tools program against the interface.
-- `real_foo_client.js`: production implementation. Authenticates via ADC or a
-  passed-through OAuth token, calls the live Google API.
+- `real_foo_client.js`: production implementation. Authenticates via ADC and
+  calls the live Google API. Each method also accepts a bearer token,
+  which when supplied takes the place of ADC.
 
-There is no separate `fake_*_client.js` class. For tests, we instantiate the
-same `Real*Client` and redirect it at the fake API server in
-`test/helpers/fake-api-server.js`. The factory in
+For tests, we instantiate the same `Real*Client` and redirect it at the
+fake API server in `test/helpers/fake-api-server.js`. The factory in
 `test/helpers/integration/tools/client_factory.js` does the wiring:
 
 ```js
@@ -39,7 +39,7 @@ same `Real*Client` and redirect it at the fake API server in
 new RealAdminSdkClient()
 
 // Fake backend (presubmit): same class, redirected via rootUrl + a fake
-// OAuth client so getAuthClient() is never called.
+// auth provider that short-circuits getAuthClient().
 new RealAdminSdkClient({ rootUrl, auth: fakeAuth })
 ```
 
@@ -55,18 +55,6 @@ passes `rootUrl` into each Real client.
 | Chrome Policy     | `chrome_policy_client.js`     | Connector policies, extension install policies                                              |
 | Cloud Identity    | `cloud_identity_client.js`    | DLP rules, detectors (CRUD)                                                                 |
 | Service Usage     | `service_usage_client.js`     | API enablement checks                                                                       |
-
-## Legacy standalone wrappers
-
-The bare files `admin_sdk.js`, `chromemanagement.js`, and `cloudidentity.js`
-are earlier standalone implementations that predate the client abstraction.
-Nothing imports them; they will be removed in a future cleanup.
-
-`chromepolicy.js` is in the same category but still has one live export:
-`ConnectorPolicyFilter` is imported by `tools/definitions/get_connector_policy.js`
-and `tools/definitions/diagnose_environment.js`. Move that constant out of
-`chromepolicy.js` (e.g., into `lib/constants.js` or the real client) before
-deleting the file.
 
 ## Adding a new API client
 

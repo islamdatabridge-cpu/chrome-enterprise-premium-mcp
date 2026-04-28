@@ -1,11 +1,5 @@
 # Chrome Enterprise Premium MCP Server
 
-> [!NOTE]
-> This is an officially supported Google product, but it is currently in an
-> early stage of development. It is intended as a working example of how to
-> build an MCP server that wraps Google Cloud and Workspace APIs and does not
-> yet support the full range of features.
-
 A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for
 [Chrome Enterprise Premium](https://docs.cloud.google.com/chrome-enterprise-premium/docs/overview)
 (CEP). CEP extends Chrome's built-in security with Data Loss Prevention (DLP),
@@ -14,10 +8,6 @@ Access controls. This server exposes CEP's DLP rules, content detectors,
 connector policies, browser telemetry, and license management as MCP tools —
 letting any MCP-compatible AI agent inspect and configure a Chrome Enterprise
 environment.
-
-The codebase also serves as a worked example of wrapping Google Workspace and
-Cloud APIs in an MCP server: client abstraction with test doubles, offline CEL
-validation, retry logic, structured tool output, and an evaluation harness.
 
 ## Important security consideration: Indirect Prompt Injection Risk
 
@@ -29,15 +19,13 @@ array of tools and APIs.
 This MCP server grants the agent the ability to read, modify, and delete your
 Google Account data, as well as other data shared with you.
 
-- Never use this with untrusted tools
-- Never include untrusted inputs into the model context. This includes asking
-  Gemini CLI to process mail, documents, or other resources from unverified
-  sources.
-- Untrusted inputs may contain hidden instructions that could hijack your CLI
-  session. Attackers can then use this to modify, steal, or destroy your
-  data.
-- Always carefully review actions taken by Gemini CLI on your behalf to ensure
-  they are correct and align with your intentions.
+- Never connect this server to untrusted tools.
+- Never feed untrusted content into the model context, including mail,
+  documents, or other resources from unverified sources.
+- Attackers can hide instructions inside untrusted content and use a
+  hijacked CLI session to modify, steal, or destroy your data.
+- Always review the actions Gemini CLI takes on your behalf and confirm
+  they match what you asked for.
 
 ## Quick Start
 
@@ -56,22 +44,35 @@ don't have it, then create
 
 ```bash
 gcloud auth application-default login \
-  --scopes="https://www.googleapis.com/auth/chrome.management.policy,https://www.googleapis.com/auth/chrome.management.reports.readonly,https://www.googleapis.com/auth/chrome.management.profiles.readonly,https://www.googleapis.com/auth/admin.reports.audit.readonly,https://www.googleapis.com/auth/admin.directory.orgunit.readonly,https://www.googleapis.com/auth/admin.directory.customer.readonly,https://www.googleapis.com/auth/cloud-identity.policies,https://www.googleapis.com/auth/apps.licensing,https://www.googleapis.com/auth/cloud-platform"
+--scopes=openid,\
+https://www.googleapis.com/auth/userinfo.email,\
+https://www.googleapis.com/auth/chrome.management.policy,\
+https://www.googleapis.com/auth/chrome.management.reports.readonly,\
+https://www.googleapis.com/auth/chrome.management.profiles.readonly,\
+https://www.googleapis.com/auth/admin.reports.audit.readonly,\
+https://www.googleapis.com/auth/admin.directory.orgunit.readonly,\
+https://www.googleapis.com/auth/admin.directory.customer.readonly,\
+https://www.googleapis.com/auth/apps.licensing,\
+https://www.googleapis.com/auth/cloud-identity.policies,\
+https://www.googleapis.com/auth/service.management,\
+https://www.googleapis.com/auth/service.management.readonly,\
+https://www.googleapis.com/auth/cloud-platform
 ```
 
 These scopes map to the underlying APIs:
 
-| Scope                                 | API                                                                             | Used for                                                       |
-| :------------------------------------ | :------------------------------------------------------------------------------ | :------------------------------------------------------------- |
-| `chrome.management.policy`            | [Chrome Policy](https://developers.google.com/chrome/policy)                    | Reading/writing connector policies, extension install policies |
-| `chrome.management.reports.readonly`  | [Chrome Management](https://developers.google.com/chrome/management)            | Browser version counts, customer profiles                      |
-| `chrome.management.profiles.readonly` | [Chrome Management](https://developers.google.com/chrome/management)            | Managed browser profiles                                       |
-| `admin.reports.audit.readonly`        | [Admin SDK Reports](https://developers.google.com/admin-sdk/reports)            | Chrome activity logs                                           |
-| `admin.directory.orgunit.readonly`    | [Admin SDK Directory](https://developers.google.com/admin-sdk/directory)        | Organizational unit hierarchy                                  |
-| `admin.directory.customer.readonly`   | [Admin SDK Directory](https://developers.google.com/admin-sdk/directory)        | Customer ID resolution                                         |
-| `cloud-identity.policies`             | [Cloud Identity](https://cloud.google.com/identity/docs)                        | DLP rules and content detectors (CRUD)                         |
-| `apps.licensing`                      | [Enterprise License Manager](https://developers.google.com/admin-sdk/licensing) | CEP subscription and per-user license checks                   |
-| `cloud-platform`                      | [Service Usage](https://cloud.google.com/service-usage/docs)                    | Checking and enabling required APIs                            |
+| Scope                                                                 | API                                                                             | Used for                                                           |
+| :-------------------------------------------------------------------- | :------------------------------------------------------------------------------ | :----------------------------------------------------------------- |
+| `openid`, `userinfo.email`                                            | OpenID Connect                                                                  | Identifies the principal in startup banner output                  |
+| `chrome.management.policy`                                            | [Chrome Policy](https://developers.google.com/chrome/policy)                    | Reading and writing connector policies, extension install policies |
+| `chrome.management.reports.readonly`                                  | [Chrome Management](https://developers.google.com/chrome/management)            | Browser version counts                                             |
+| `chrome.management.profiles.readonly`                                 | [Chrome Management](https://developers.google.com/chrome/management)            | Listing managed browser profiles                                   |
+| `admin.reports.audit.readonly`                                        | [Admin SDK Reports](https://developers.google.com/admin-sdk/reports)            | Chrome activity logs                                               |
+| `admin.directory.orgunit.readonly`                                    | [Admin SDK Directory](https://developers.google.com/admin-sdk/directory)        | Organizational unit hierarchy                                      |
+| `admin.directory.customer.readonly`                                   | [Admin SDK Directory](https://developers.google.com/admin-sdk/directory)        | Customer ID resolution                                             |
+| `apps.licensing`                                                      | [Enterprise License Manager](https://developers.google.com/admin-sdk/licensing) | CEP subscription and per-user license checks                       |
+| `cloud-identity.policies`                                             | [Cloud Identity](https://cloud.google.com/identity/docs)                        | DLP rules and content detectors (CRUD)                             |
+| `service.management`, `service.management.readonly`, `cloud-platform` | [Service Usage](https://cloud.google.com/service-usage/docs)                    | Checking and enabling required APIs                                |
 
 Then set a quota project (identifies which GCP project's API enablement and
 quotas to use):
@@ -80,15 +81,13 @@ quotas to use):
 gcloud auth application-default set-quota-project YOUR_PROJECT_ID
 ```
 
-> **Scopes must be provided at login time.** You cannot add scopes to existing
-> ADC credentials. If you get "insufficient scopes" errors, delete
-> `~/.config/gcloud/application_default_credentials.json` and re-run the login
-> command above.
+> **Scopes must be provided at login time.** You cannot add scopes to
+> existing ADC credentials. If you get "insufficient scopes" errors,
+> delete `~/.config/gcloud/application_default_credentials.json` and re-run
+> the login command above.
 >
-> **No per-call charges.** These APIs are included with your Google Workspace /
-> Chrome Enterprise Premium license. The quota project is for API enablement and
-> rate limiting, not billing. If you skip setting it, you'll see a "quota
-> project not set" error on the first API call.
+> **The quota project is required.** Without it you'll see a "quota project
+> not set" error on the first API call.
 
 ### 2. Enable Required APIs
 
@@ -207,8 +206,7 @@ appear, see [Troubleshooting](#troubleshooting).
 
 ## Configuration
 
-For environment variables, stdio vs. HTTP modes, and OAuth setup (including
-the current state of the managed OAuth client for CEP), see
+For environment variables and stdio vs. HTTP transport, see
 [`docs/configuration.md`](docs/configuration.md).
 
 ## Prerequisites
@@ -317,8 +315,8 @@ If something isn't working:
 
 1. In Gemini CLI, run `/bug` to capture session diagnostics. Attach the
    generated file to your issue.
-2. Run `npm run presubmit` and include the output; this helps determine whether
-   the issue is environmental or a code bug.
+2. Run `npm run presubmit` and paste the output; this lets maintainers tell
+   environmental problems from real code bugs.
 3. Describe what you expected vs. what actually happened, including the exact
    error message.
 

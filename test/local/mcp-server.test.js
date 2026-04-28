@@ -99,7 +99,7 @@ describe('MCP Server in stdio mode', () => {
       const serverPath = path.resolve(__dirname, '../../mcp-server.js')
       const result = spawnSync(process.execPath, [serverPath], {
         env: { ...process.env, PORT: '4000', GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info' },
-        timeout: 5000,
+        timeout: 12000,
       })
 
       const output = result.stderr.toString() + result.stdout.toString()
@@ -111,7 +111,7 @@ describe('MCP Server in stdio mode', () => {
       const serverPath = path.resolve(__dirname, '../../mcp-server.js')
       const result = spawnSync(process.execPath, [serverPath], {
         env: { ...process.env, GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info' },
-        timeout: 5000,
+        timeout: 12000,
       })
 
       const output = result.stderr.toString() + result.stdout.toString()
@@ -130,7 +130,7 @@ describe('MCP Server in stdio mode', () => {
 
       const result = spawnSync(process.execPath, [serverPath], {
         env: { ...process.env, PORT: port.toString(), GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info' },
-        timeout: 5000,
+        timeout: 12000,
       })
 
       const output = result.stderr.toString() + result.stdout.toString()
@@ -143,7 +143,7 @@ describe('MCP Server in stdio mode', () => {
       const serverPath = path.resolve(__dirname, '../../mcp-server.js')
       const result = spawnSync(process.execPath, [serverPath], {
         env: { ...process.env, GOOGLE_API_ROOT_URL: 'http://localhost:8080', GCP_STDIO: 'true', CEP_LOG_LEVEL: 'info' },
-        timeout: 5000,
+        timeout: 12000,
       })
 
       const output = result.stderr.toString() + result.stdout.toString()

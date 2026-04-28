@@ -39,9 +39,9 @@ limitations under the License.
 
 - **Client abstraction.** Each Google API has an interface
   (`lib/api/interfaces/`) and a real implementation (`lib/api/real_*.js`).
-  Tools program against the interface. There is no separate fake client class:
-  we instantiate the same `Real*Client` with a `rootUrl` override and a stub
-  OAuth token to redirect it at the in-process fake server. See
+  Tools program against the interface. For tests, we instantiate the same
+  `Real*Client` with a `rootUrl` override and a stub auth client to
+  redirect calls at the in-process fake server. See
   [`lib/api/README.md`](../lib/api/README.md) for the full pattern.
 - **Structured tool output.** Tools return structured JSON with both
   machine-readable data and human-readable summaries.
