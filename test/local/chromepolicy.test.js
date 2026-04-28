@@ -40,7 +40,7 @@ describe('RealChromePolicyClient', () => {
       },
     })
 
-    const client = new MockedClient()
+    const client = new MockedClient({ auth: {} })
     const result = await client.resolvePolicy('C0123', 'OU456', 'some.filter')
 
     assert.strictEqual(mockResolve.mock.callCount(), 1)
@@ -72,7 +72,7 @@ describe('RealChromePolicyClient', () => {
       },
     })
 
-    const client = new MockedClient()
+    const client = new MockedClient({ auth: {} })
     const result = await client.resolvePolicy('C0123', 'OU456', 'some.filter')
 
     assert.deepStrictEqual(result, [])
@@ -99,7 +99,7 @@ describe('RealChromePolicyClient', () => {
       },
     })
 
-    const client = new MockedClient()
+    const client = new MockedClient({ auth: {} })
     const requests = [{ policyValue: { test: 'value' } }]
     const result = await client.batchModifyPolicy('C0123', 'OU456', requests)
 
