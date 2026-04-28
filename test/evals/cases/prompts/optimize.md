@@ -22,7 +22,7 @@ Agent should report that the environment has no DLP rules in place and that no e
 
 ## Judge Instructions
 
-The agent MUST identify that there are no DLP rules and explain that the environment has no DLP coverage. If the agent reports any existing DLP rules, grade as FAIL (the scenario removes them all). Recommending a phased rollout (audit first, then warn, then block) shows strong understanding. The agent should NOT label this state with internal taxonomy like "Tier 0", "early stage", or "low maturity" — describe it in plain language. Using such labels is a soft FAIL.
+The agent MUST identify that there are no DLP rules and explain that the environment has no DLP coverage. If the agent reports any existing DLP rules, grade as FAIL (the scenario removes them all). Recommending a phased rollout (audit first, then warn, then block) shows strong understanding. If the agent labels this state with internal taxonomy in the user-facing reply (e.g., "Tier 0", "early stage", "low maturity", "MECE", "Maturity Model"), grade as FAIL even if the rest of the analysis is correct.
 
 --- CASE ---
 
@@ -48,7 +48,7 @@ Agent should report that all 4 DLP rules are in audit-only mode — the environm
 
 ## Judge Instructions
 
-The agent MUST identify that all rules are audit-only and recommend progression to warn or block for high-confidence rules. If the agent says rules are already enforcing, grade as FAIL. The agent should NOT use internal taxonomy ("Tier 1", "early monitoring stage", "maturity model") — describe the state in plain language. Using such labels is a soft FAIL.
+The agent MUST identify that all rules are audit-only and recommend progression to warn or block for high-confidence rules. If the agent says rules are already enforcing, grade as FAIL. If the agent uses internal taxonomy in the user-facing reply (e.g., "Tier 1", "early monitoring stage", "maturity model", "MECE"), grade as FAIL even if the rest of the analysis is correct.
 
 --- CASE ---
 
@@ -74,7 +74,7 @@ Agent should report 4 active DLP rules across multiple OUs covering a mix of blo
 
 ## Judge Instructions
 
-The agent MUST identify that multiple rules with different action types are active and producing events. If the agent says there are no rules or that nothing is enforcing, grade as FAIL. The agent should NOT use internal taxonomy ("Tier 3", "advanced maturity"). Plain descriptions like "rules in mixed enforcement modes are firing" are correct. Using internal labels is a soft FAIL.
+The agent MUST identify that multiple rules with different action types are active and producing events. If the agent says there are no rules or that nothing is enforcing, grade as FAIL. If the agent uses internal taxonomy in the user-facing reply (e.g., "Tier 3", "advanced maturity", "MECE"), grade as FAIL even if the rest of the analysis is correct. Plain descriptions like "rules in mixed enforcement modes are firing" are the expected style.
 
 --- CASE ---
 
@@ -100,7 +100,7 @@ Agent should report that multiple rules exist but one ("Block all sensitive cont
 
 ## Judge Instructions
 
-The agent MUST identify the overly broad block rule and explain why its scope is a problem. Simply counting rules and saying everything looks good is FAIL. The agent should note that broad catch-all rules need refinement. Internal taxonomy ("intermediate maturity", "Tier 2") is a soft FAIL — describe the issue with the specific rule in plain language.
+The agent MUST identify the overly broad block rule and explain why its scope is a problem. Simply counting rules and saying everything looks good is FAIL. The agent should note that broad catch-all rules need refinement. If the agent uses internal taxonomy in the user-facing reply (e.g., "intermediate maturity", "Tier 2", "MECE"), grade as FAIL even if the rest of the analysis is correct.
 
 --- CASE ---
 
