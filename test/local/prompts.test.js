@@ -71,9 +71,17 @@ describe('MCP Prompts', () => {
     const result = await client.getPrompt({ name: 'cep:optimize' })
 
     assert.ok(result.messages)
-    assert.ok(result.messages[0].content.text.includes('Maturity Assessment'))
-    assert.ok(result.messages[0].content.text.includes('get_document'))
-    assert.ok(result.messages[0].content.text.includes('filename: 12'))
+    const text = result.messages[0].content.text
+    assert.ok(text.includes('Environment summary'))
+    assert.ok(text.includes('Rule findings'))
+    assert.ok(text.includes('get_document'))
+    assert.ok(text.includes('filename: 12'))
+    // Guardrails: the user-facing prompt template must not surface the old
+    // internal taxonomy. The agent leaked these labels to admins as if they
+    // were documented CEP product concepts; they aren't.
+    assert.doesNotMatch(text, /Maturity Tier/)
+    assert.doesNotMatch(text, /\bMECE\b/)
+    assert.doesNotMatch(text, /Tier [0-3]/)
   })
 
   test('When cep:expert prompt is requested, then it returns its content', async () => {

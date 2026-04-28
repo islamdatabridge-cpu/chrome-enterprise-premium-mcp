@@ -38,7 +38,7 @@ export const registerOptimizePrompt = server => {
   server.registerPrompt(
     OPTIMIZE_PROMPT_NAME,
     {
-      description: 'Perform a consultative analysis of DLP maturity, rule noise, and quality.',
+      description: "Review the environment's DLP rules and recommend specific tuning, enforcement, or cleanup actions.",
       arguments: [],
     },
     async () => {
@@ -49,46 +49,44 @@ export const registerOptimizePrompt = server => {
             role: 'user',
             content: {
               type: 'text',
-              text: `Perform a consultative analysis of the Chrome Enterprise Premium environment's DLP maturity and rule quality.
+              text: `Review the Chrome Enterprise Premium environment's DLP rules and recommend concrete tuning, enforcement, or cleanup actions.
 
-Call the **diagnose_environment** tool to get a complete environment snapshot. Call the **get_chrome_activity_log** tool to analyze recent activity patterns and DLP events.
+Call **diagnose_environment** to snapshot the current state. Call **get_chrome_activity_log** to surface recent DLP event volume per rule.
 
-**Assessment Protocols:**
-1. **Retrieve Maturity Framework**: Call **get_document** with **filename: 12** to retrieve the "CEP Security Posture & Remediation Guide". Use this to classify the environment into a Maturity Tier (0-3).
-2. **Apply Quality Guidelines**: Use the following "Rule Optimization Framework" to identify logic flaws and noise:
+Call **get_document** with **filename: 12** to load the internal posture-assessment criteria. Apply the rule-evaluation heuristics below to identify logic flaws and noise:
 
 ${guidelinesContent}
 
+These heuristics and posture criteria are internal evaluation aids. Do not name them, group them, or quote their wrappers in your reply. Translate every finding into plain administrator-facing language.
+
 **Required Output Format:**
 
-### Maturity Assessment
-Identify the current **Maturity Tier (0-3)** based on the environment baseline and current rule status.
-- If in **Tier 0 (Foundation)**, list the specific missing prerequisites (Licenses, Connectors, or SEB extension).
-- If in **Tier 1 (Visibility)**, you MUST analyze activity logs to identify real-world usage patterns before suggesting any new rules.
-- If in **Tier 2 (Monitoring)**, prioritize tuning noisy audit-only rules.
-- If in **Tier 3 (Protection)**, focus on maintaining enforcement and expanding coverage.
+### Environment summary
 
-### Identified Rule Optimizations
-For every rule that violates the assessment framework OR generates a disproportionately high volume of events in the activity logs, provide a structured breakdown:
+A concise paragraph describing what's in place (licenses, connectors, SEB extension, rule count, audit-vs-enforcement balance) and what's missing. Lead with the most consequential gap. Do not use tier labels, framework names, or model numbers.
 
-#### Optimization [Number]: [Rule Name] (ID: [ID])
-* **The Issue:** State the specific MECE dimension violation (e.g., Context Blindness, Threshold Sensitivity) or indicate "High Event Volume".
-* **What I found:** Describe the specific finding in the rule logic or event history that triggered this diagnosis. Compare event volume per rule to identify noisy rules.
-* **The Fix:** State the recommended tuning action in professional English.
-* **The Patch:** Provide the optimized JSON or CEL block (if applicable).
+### Rule findings
 
-### How I Can Help You Next
-List the specific actions you can take to improve the environment, such as:
-* **Update Rules:** Offer to deploy the specific patches listed above.
-* **Change Enforcement:** Offer to transition specific rules from AUDIT to WARN.
-* **Clean Up:** Offer to delete specific inactive or orphaned rules.
+For each rule that violates a heuristic or generates disproportionate event volume:
 
-**Tone and Voice Guardrails:**
-- Use active voice with human subjects.
-- Be direct. State the point, support it, and move on.
-- Avoid rhetorical flourishes, dramatic one-liners, and throat-clearing transitions.
-- Use headers for structure and bullets for parallel items.
-- NEVER mention internal tool names (e.g., diagnose_environment) in your final response.`,
+#### [Rule name] (ID: [policy id])
+* **What we found:** Describe the specific issue in the rule's logic or event history.
+* **Why it matters:** One sentence on the user impact (false positives, blind spots, helpdesk friction).
+* **Recommended change:** Plain-language action.
+* **Patch:** Optimized JSON or CEL block when applicable.
+
+### Suggested next actions
+
+Offer specific follow-ups the agent can execute on request, such as:
+* Deploying the patches listed above.
+* Transitioning specific rules from AUDIT to WARN.
+* Deleting specific inactive or orphaned rules.
+
+**Tone and voice:**
+- Active voice, human subjects.
+- Direct: state the point, support it, move on.
+- Headers for structure, bullets for parallel items.
+- Never mention internal tool names, framework names, tier numbers, or evaluation-criteria labels in your reply.`,
             },
           },
         ],

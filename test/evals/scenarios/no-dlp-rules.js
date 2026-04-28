@@ -17,7 +17,7 @@ limitations under the License.
 /**
  * @file Scenario: all DLP rules removed (zero enforcement).
  *
- * Used by: pr05 (prompt maturity).
+ * Used by: pr05 (prompt rule-state).
  */
 
 /** @param {object} state - Cloned base state. */
