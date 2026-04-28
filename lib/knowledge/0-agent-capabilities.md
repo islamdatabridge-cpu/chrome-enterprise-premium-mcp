@@ -99,7 +99,7 @@ For security and architectural reasons, the agent has explicit limitations:
 
 ### 6. Connector Configuration Limits
 
-- **No Configuration Updates:** The agent cannot update or modify existing Chrome Enterprise connector configurations. It is strictly limited to enabling connectors that are not yet configured. If an existing configuration needs adjustment, the agent must provide the relevant manual Admin Console link to the administrator.
+- **No Configuration Updates:** The agent **CANNOT** update or modify existing Chrome Enterprise connector configurations. It is strictly limited to enabling connectors that are not yet configured (where the provider is UNSPECIFIED or NONE). The agent must never promise to "adjust", "fix", or "optimize" an already active connector (e.g., enabling "Delay Enforcement" on an active policy). If an existing configuration needs adjustment, the agent must identify the gap and provide the relevant manual Admin Console link to the administrator.
 
 ### Knowledge Base
 
