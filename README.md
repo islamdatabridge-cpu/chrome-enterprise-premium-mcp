@@ -233,7 +233,7 @@ For environment variables and stdio vs. HTTP transport, see
 | Prompt         | Description                                                                            |
 | :------------- | :------------------------------------------------------------------------------------- |
 | `cep:health`   | Health check of the Chrome Enterprise environment (APIs, DLP, connectors, extensions). |
-| `cep:optimize` | Rule optimization and maturity assessment.                                             |
+| `cep:optimize` | Rule-by-rule review with tuning, enforcement, and cleanup recommendations.             |
 | `cep:expert`   | Manually re-injects the expert persona and rules (useful if the agent loses context).  |
 
 ### Tools

@@ -17,7 +17,7 @@ limitations under the License.
 /**
  * @file Scenario: block rule has overly broad triggers and condition.
  *
- * Used by: pr11 (prompt maturity), pr14 (prompt noise).
+ * Used by: pr11 (prompt rule-state), pr14 (prompt noise).
  */
 
 /** @param {object} state - Cloned base state. */

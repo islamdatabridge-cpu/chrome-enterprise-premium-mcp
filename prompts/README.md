@@ -31,11 +31,11 @@ agent through complex diagnostic and optimization workflows.
 
 ## Current prompts
 
-| Name           | File          | Description                                            |
-| :------------- | :------------ | :----------------------------------------------------- |
-| `cep:health`   | `health.js`   | Health check of the Chrome Enterprise environment.     |
-| `cep:optimize` | `optimize.js` | Rule optimization and maturity assessment.             |
-| `cep:expert`   | `expert.js`   | Loads the full expert persona from `system-prompt.md`. |
+| Name           | File          | Description                                                                |
+| :------------- | :------------ | :------------------------------------------------------------------------- |
+| `cep:health`   | `health.js`   | Health check of the Chrome Enterprise environment.                         |
+| `cep:optimize` | `optimize.js` | Rule-by-rule review with tuning, enforcement, and cleanup recommendations. |
+| `cep:expert`   | `expert.js`   | Loads the full expert persona from `system-prompt.md`.                     |
 
 ## Shared diagnostic rules (`definitions/shared.js`)
 

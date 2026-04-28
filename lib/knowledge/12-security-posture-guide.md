@@ -1,53 +1,59 @@
 ---
-title: CEP Security Posture & Remediation Guide
+title: CEP Security Posture Assessment Heuristics
 articleId: '12'
-summary: 'Definitive roadmap for improving security posture using the CEP Maturity Model (Tiers 0-3). Helps administrators transition from visibility to active protection. Covers the critical "Telemetry Dependency" (logs require active rules) and remediation for each tier. Keywords: Maturity Tiers, Starter Pack rules, Telemetry Dependency, SEB extension requirements.'
+summary: 'Internal evaluation criteria the agent uses to assess a Chrome Enterprise Premium environment and recommend next steps. Walks through whether the prerequisites (licenses, connectors, SEB extension) are present, whether DLP rules exist, whether they are tuned, and whether they are enforcing. Covers the telemetry dependency (logs require active rules). For agent-internal use only — do not surface labels or framework names to users.'
 ---
 
-# CEP Security Posture & Remediation Guide
+# CEP Security Posture Assessment
 
-This guide is the primary technical reference for improving a Chrome Enterprise Premium (CEP) environment. To provide effective advice, first **Diagnose** the environment using `diagnose_environment` and **Assess** the current Maturity Tier based on the criteria below.
+These criteria help the agent decide what to recommend after running `diagnose_environment`. They are agent-internal — describe findings to the user in plain language without quoting category names from this article.
 
-## Maturity Tiers
+## Step 1: Are the prerequisites in place?
 
-### Tier 0: Foundation (Prerequisites)
+Look for missing CEP licenses, unconfigured Content Analysis Connectors, or a missing Secure Enterprise Browser (SEB) extension.
 
-**Criteria**: Missing CEP licenses, unconfigured connectors, or missing Secure Enterprise Browser (SEB) extension.
-**Goal**: Establish the infrastructure for scanning and enforcement.
-**Remediation Steps**:
+**Directive**: If any prerequisite is missing, the agent MUST recommend closing those gaps before suggesting any DLP rule work. DLP rules cannot scan content while connectors are off, and data-masking features depend on the SEB extension. Surface this dependency explicitly; do not list rule recommendations alongside foundation gaps.
+
+**What to recommend**:
 
 1.  **Licenses**: Assign CEP licenses to all managed users.
 2.  **Connectors**: Enable and configure all Content Analysis Connectors (Upload, Download, Paste, Print, URL Check) at the Root OU.
-3.  **SEB Extension**: Force-install the Secure Enterprise Browser extension (ID: `ekajlcmdfcigmdbphhifahdfjbkciflj`) to enable advanced features like data masking.
+3.  **SEB extension**: Force-install the Secure Enterprise Browser extension (ID: `ekajlcmdfcigmdbphhifahdfjbkciflj`) so the environment can use advanced features like data masking.
 
-### Tier 1: Visibility (Initial Monitoring)
+## Step 2: Are there any DLP rules?
 
-**Criteria**: Foundation is present, but there are zero or very few DLP rules.
-**Goal**: Establish visibility into sensitive data flows to identify real-world risk.
-**Visibility Strategy**:
+If the prerequisites are in place but the environment has zero or very few rules.
 
-1.  **Telemetry Dependency**: Security logs for data-centric events (e.g., sensitive data hits) are only populated when a corresponding rule is active. If logs are empty, it likely indicates a lack of active monitoring rules.
-2.  **Visibility Options**:
-    - **Broad Baseline**: Deploying broad `AUDIT` rules (e.g., a "Starter Pack") provides a comprehensive view of high-risk data flows across the organization.
-    - **Incremental Discovery**: For organizations with strict change controls, start with specific `AUDIT` rules targeting known sensitive domains or high-risk detectors (e.g., PII in uploads).
-3.  **Data-Driven Refinement**: Once logs are populating, use `get_chrome_activity_log` to identify patterns and transition to Tier 2.
+**Directive**: The agent MUST analyze the activity log first to anchor any rule recommendations in real-world usage patterns, even though the log will be sparse here (security logs for data-centric events only populate when a rule is active). New rules MUST start in `AUDIT` mode; do not propose creating a rule directly in `WARN` or `BLOCK` from this state.
 
-### Tier 2: Monitoring (Established Baseline)
+**What to recommend (in order)**:
 
-**Criteria**: DLP rules exist but are predominantly in `AUDIT` mode.
-**Goal**: Tune rules for high fidelity and zero false positives.
-**Remediation Steps**:
+1.  **Activity-log review first**: Call `get_chrome_activity_log` and report what's in it. If sparse or empty, name that explicitly — that's the consequence of having no rules.
+2.  **Pick a deployment style**:
+    - **Broad baseline**: Deploy broad `AUDIT`-mode rules (a "starter pack") for a comprehensive view of high-risk data flows.
+    - **Incremental discovery**: For organizations with strict change controls, deploy targeted `AUDIT` rules covering known-sensitive domains or specific high-risk detectors first.
+3.  **Plan the next review**: Once `AUDIT` logs populate, the agent should re-run the assessment to identify patterns and move on to tuning.
 
-1.  **Log Review**: Analyze audit logs to identify noise or false positives.
-2.  **Rule Tuning**: Adjust match thresholds, refine URL categories, or add destination constraints based on real-world usage.
-3.  **Trigger Expansion**: Ensure coverage across all relevant triggers (Upload, Paste, Download, etc.).
+## Step 3: Are the existing rules tuned?
 
-### Tier 3: Protection (Enforcement)
+If rules exist but are predominantly in `AUDIT` mode.
 
-**Criteria**: Rules are tuned, high-fidelity, and cover critical egress points.
-**Goal**: Actively prevent data exfiltration.
-**Remediation Steps**:
+**Directive**: The agent MUST prioritize tuning noisy audit-only rules over adding new ones. Before recommending changes, correlate `get_chrome_activity_log` events to specific rules and identify the highest-volume offenders. A rule that fires disproportionately is a false-positive risk, not proof of value.
 
-1.  **Transition to Enforcement**: Change stable, high-fidelity rules from `AUDIT` to `WARN` or `BLOCK`.
-2.  **Data Masking**: Implement Hard or Light obfuscation for sensitive data in the browser for specific URLs.
-3.  **Continuous Audit**: Perform weekly reviews of `BLOCK` events to ensure business continuity.
+**What to recommend (priority order)**:
+
+1.  **Identify the noisy rule(s)**: Use the activity log to find rules generating a disproportionate share of events. Lead the recommendations with those rules.
+2.  **Tighten the noisy rule**: Adjust match thresholds, refine URL categories, or add destination constraints based on observed traffic. Provide a concrete patch (CEL or JSON) when proposing changes.
+3.  **Confirm trigger coverage**: After tuning, verify rules cover the relevant triggers (Upload, Paste, Download, Print, URL Check) for the data types in scope.
+
+## Step 4: Are the rules enforcing?
+
+If rules are tuned and high-fidelity (in `WARN` or `BLOCK`, with low false-positive rates).
+
+**Directive**: The agent MUST focus on maintaining enforcement and expanding coverage carefully. Do not recommend new `BLOCK` rules without first staging them in `AUDIT` mode (the safety guardrail in the system prompt enforces this — `BLOCK` rules cannot be created in `ACTIVE` state by the agent). Continuous-audit recommendations take priority over policy expansion.
+
+**What to recommend (focus areas)**:
+
+1.  **Maintain enforcement**: Keep stable, high-fidelity rules in `WARN` or `BLOCK`. Recommend a weekly review of `BLOCK` events to keep business continuity in view.
+2.  **Expand coverage carefully**: When proposing new coverage, stage it in `AUDIT` mode first; promote to `WARN` or `BLOCK` only after the audit logs confirm low false-positive rates.
+3.  **Apply data masking**: Implement hard or light obfuscation for sensitive data in the browser for specific URLs where that's appropriate.
