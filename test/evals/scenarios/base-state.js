@@ -239,10 +239,12 @@ export function getBaseState() {
             policySchema: 'chrome.users.OnPrintAnalysisConnectorPolicy',
             value: {
               onPrintAnalysisConnectorConfiguration: {
-                printAnalysisConfiguration: {
-                  serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
-                  delayDeliveryUntilVerdict: true,
-                },
+                printConfigurations: [
+                  {
+                    serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                    delayDeliveryUntilVerdict: true,
+                  },
+                ],
               },
             },
           },

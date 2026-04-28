@@ -87,7 +87,7 @@ what was configured in user-friendly terms.
 | Field                | Type     | Description                                                                                                          |
 | -------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
 | `id`                 | string   | Unique identifier (e.g., `k01`, `m01`, `t03`)                                                                        |
-| `category`           | string   | One of: `knowledge`, `inspection`, `troubleshooting`, `mutation`, `discovery`                                        |
+| `category`           | string   | One of: `knowledge`, `inspection`, `troubleshooting`, `mutation`, `discovery`, `connectors`                          |
 | `priority`           | string   | Classification: `P0` (launch blocking - must work), `P1` (agent must not get egregiously wrong), `P2` (nice to have) |
 | `tags`               | string[] | Freeform tags for filtering (e.g., `[dlp, create]`)                                                                  |
 | `expected_tools`     | string[] | Tools the agent should call. Validated deterministically.                                                            |
