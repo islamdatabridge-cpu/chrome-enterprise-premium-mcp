@@ -55,11 +55,13 @@ Call the **diagnose_environment** tool to get a complete environment snapshot in
 - **SEB Extension**: Whether the Secure Enterprise Browser extension is force-installed on the root OU
 - **Browser Versions**: Distribution of Chrome versions across managed devices
 
-The response includes a pre-computed **issues[]** array with severity ratings. Use this as your starting point, but also examine the raw data to provide context. For example:
-- If a connector is missing, explain what content goes unscanned without it
-- If DLP rules are audit-only, explain that users are not blocked or warned
-- If the SEB extension is missing, explain which features (like data masking) depend on it
-- If there are no issues, confirm the environment is healthy and summarize the key metrics
+The response includes a pre-computed **issues[]** array with severity ratings. Use this as your starting point, but also examine the raw data to identify **dependencies between controls** before reporting. The most useful health check leads with the upstream gap, not a list of leaf failures. Look for:
+- **Connectors and DLP rules.** DLP rules cannot scan content unless the matching Content Analysis Connector is enabled. If connectors are missing while DLP rules exist, the rules are inert — surface this as the top finding rather than listing the connector gaps and the rule list separately.
+- **Detectors and DLP rules.** Active DLP rules can reference custom detectors. If a referenced detector doesn't exist, the rule silently produces no matches. Flag this dependency explicitly.
+- **Subscription and everything else.** If the CEP subscription is inactive or has zero licenses assigned, no other control matters until that's fixed.
+- **SEB extension and browser-side features.** Data masking and other in-browser enforcement only work where the Secure Enterprise Browser extension is force-installed.
+- **Audit-only rules.** Rules in audit mode don't block or warn users; they only log events. Note this when summarizing rule status.
+- **Healthy environment.** When nothing is broken, confirm the environment is healthy and summarize the key metrics — don't manufacture a problem.
 
 ${SHARED_DIAGNOSTIC_RULES}
 `,
