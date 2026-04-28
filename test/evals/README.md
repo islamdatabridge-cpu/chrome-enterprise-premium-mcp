@@ -265,30 +265,7 @@ Examples: "What's my customer ID?", "Show me all content detectors"
 
 ## Running evals
 
-```bash
-# Run all evals
-node test/evals/run.js
-
-# Run a single eval
-node test/evals/run.js --id m01
-
-# Run a category
-node test/evals/run.js --category mutation
-
-# Run by tags
-node test/evals/run.js --tags dlp,create
-
-# Multiple judge runs for consistency measurement
-node test/evals/run.js --runs 3
-
-# CI mode: JSON output + exit code
-node test/evals/run.js --output eval-results.json
-
-# Verbose: show full agent responses
-node test/evals/run.js --id k01 --verbose
-```
-
-### npm scripts
+The four npm scripts cover the common workflows:
 
 ```bash
 npm run eval              # all evals
@@ -296,6 +273,18 @@ npm run eval:knowledge    # knowledge category only
 npm run eval:agentic      # all non-knowledge categories
 npm run eval:full         # 3 runs per eval, JSON output
 ```
+
+For one-off filtering, invoke the runner directly:
+
+```bash
+node test/evals/run.js --id m01           # single eval
+node test/evals/run.js --tags dlp,create  # by tag
+node test/evals/run.js --output out.json  # CI: JSON + exit code
+```
+
+The runner accepts more flags (`--runs`, `--concurrency`, `--delay`,
+`--verbose`, `--no-judge`, `--dry-run`); see the usage block at the top of
+[`run.js`](./run.js).
 
 ### Environment variables
 
