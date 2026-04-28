@@ -31,8 +31,8 @@ If you encounter an issue, please file a GitHub issue with the following:
    `/bug` command. This creates a diagnostic file with session logs and
    environment details. Attach it to the issue.
 
-2. **Run presubmit.** Run `npm run presubmit` and include the output. This
-   helps determine whether the issue is environmental or a code bug.
+2. **Run presubmit.** Run `npm run presubmit` and paste the output. The
+   output lets maintainers tell environmental problems from real code bugs.
 
 3. **Describe what you expected** vs. what actually happened, including the
    exact error message.
@@ -41,9 +41,9 @@ If you encounter an issue, please file a GitHub issue with the following:
 
 ### Start with an issue
 
-Before sending a pull request, please open an issue describing the bug or
-feature you would like to address. This allows maintainers to guide your design
-and implementation before you invest significant effort.
+Before sending a pull request, open an issue describing the bug or feature
+you want to address. Maintainers can then guide your design and
+implementation before you invest significant effort.
 
 ### Code reviews
 
@@ -88,9 +88,9 @@ files via lint-staged on commit, so a clean working tree usually passes.
 
 ### Continuous integration
 
-Pull requests trigger four parallel jobs on GitHub Actions: `lint`,
+On every pull request, GitHub Actions runs four parallel jobs: `lint`,
 `test-unit`, `test-integration-fake`, and `test-smoke`. Each maps to one of
-the `npm run` scripts above. Jobs run hermetically (no ADC), so any test
-that inadvertently reaches `getAuthClient()` fails fast with a named error
-instead of timing out on metadata-server discovery. The workflow is at
-[`.github/workflows/node.js.yml`](.github/workflows/node.js.yml).
+the `npm run` scripts above. The jobs run hermetically without ADC, so a
+test that accidentally reaches `getAuthClient()` fails fast with a named
+error rather than hanging on metadata-server discovery. The workflow lives
+at [`.github/workflows/node.js.yml`](.github/workflows/node.js.yml).

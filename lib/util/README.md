@@ -16,17 +16,16 @@ limitations under the License.
 
 # lib/util
 
-Shared infrastructure used by the API layer and tools. Nothing here is
-Chrome-specific business logic — these are cross-cutting concerns.
+Cross-cutting helpers the API layer and tools share: authentication,
+logging, retry, GCP detection, CEL validation, and feature flags.
 
 ## Files by function
 
 **Auth**
 
-- `auth.js` — Primary entry point. `getAuthClient()` returns an authenticated
-  client using ADC or a passed-through OAuth token. Also exports
-  `oauthMiddleware` for HTTP mode and `verifyToken` / `ensureADCCredentials`
-  helpers.
+- `auth.js` — `getAuthClient()` returns an authenticated client using
+  Application Default Credentials (ADC), or wraps a supplied bearer when
+  one is passed. Also exports `ensureADCCredentials()`.
 - `auth-error.js` — Generates descriptive error messages for auth failures
   (missing credentials, insufficient scopes, quota project not set). Detects
   `gcloud` installation and suggests fix commands.
@@ -58,6 +57,6 @@ Chrome-specific business logic — these are cross-cutting concerns.
   stderr in stdio mode so stdout stays clean for MCP protocol messages.
 - `gcp.js` — GCP metadata server utilities. `checkGCP()` detects the runtime
   environment; `ensureApisEnabled()` checks and enables required APIs.
-- `feature_flags.js` — Simple feature flag system. Flags are enabled via
-  `EXPERIMENT_` prefixed environment variables. Currently gates the delete
-  tools.
+- `feature_flags.js` — Reads `EXPERIMENT_`-prefixed environment variables
+  to enable experimental tools. Today the delete tools sit behind
+  `EXPERIMENT_DELETE_TOOL_ENABLED`.

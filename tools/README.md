@@ -22,19 +22,21 @@ server. `index.js` wires each tool to its API clients and session state.
 ## Tool anatomy
 
 Every tool file exports a `registerXxxTool(server, options, sessionState)`
-function that calls `server.registerTool(name, schema, handler)`. The handler is
-wrapped with `guardedToolCall` from `utils/wrapper.js`, which provides:
+function that calls `server.registerTool(name, schema, handler)`. We wrap
+each handler with `guardedToolCall` from `utils/wrapper.js`, which:
 
-- **Automatic customer ID resolution:** if the tool needs a `customerId` and
-  one isn't provided, the wrapper calls `get_customer_id` and caches the
-  result in session state.
-- **Org unit normalization:** strips `id:` prefixes from org unit IDs.
-- **System prompt injection:** on the first tool call of a session, injects
-  `prompts/system-prompt.md` and `lib/knowledge/0-agent-capabilities.md` into
-  the response.
-- **Error handling:** catches and formats errors consistently.
-- **History tracking:** records each tool call in session state for
-  diagnostics.
+- **Resolves customer ID automatically.** When a tool needs a `customerId`
+  and the caller did not pass one, the wrapper calls `get_customer_id` and
+  caches the result in session state.
+- **Normalizes org unit identifiers.** The wrapper strips `id:` prefixes
+  off any incoming org unit ID before forwarding it to a Google API.
+- **Injects the system prompt on first call.** On the first tool call of
+  a session, the wrapper appends `prompts/system-prompt.md` and
+  `lib/knowledge/0-agent-capabilities.md` to the response so the agent
+  picks up its grounding context.
+- **Catches and formats errors.** Each error reaches the client in a
+  consistent shape.
+- **Records each tool call in session state** for diagnostics.
 
 ## Response format
 

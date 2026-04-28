@@ -18,9 +18,9 @@ limitations under the License.
 /**
  * @file Chrome Enterprise Premium MCP Server Entry Point.
  *
- * Configures and starts the Model Context Protocol (MCP) server.
- * Supports both stdio (local) and SSE (remote/HTTP) transport modes.
- * Automatically detects the execution environment (local vs. GCP).
+ * Configures and starts the Model Context Protocol (MCP) server. Supports
+ * stdio (local) and HTTP/SSE (remote) transports. Authenticates to Google
+ * APIs via Application Default Credentials (ADC) regardless of transport.
  */
 
 import { config } from '@dotenvx/dotenvx'
@@ -32,16 +32,21 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { SetLevelRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import fs from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { GoogleAuth, OAuth2Client } from 'google-auth-library'
+
+const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'))
 
 import { buildServerInstructions } from './lib/knowledge/instructions.js'
 import { registerTools } from './tools/index.js'
 import { registerPrompts } from './prompts/index.js'
 import { checkGCP } from './lib/util/gcp.js'
-import { oauthMiddleware } from './lib/util/auth.js'
 import { featureFlags, FLAGS } from './lib/util/feature_flags.js'
 import { logger } from './lib/util/logger.js'
 import { printBanner, dim } from './lib/util/banner.js'
-import { TAGS, SCOPES, BEARER_METHODS_SUPPORTED, RESPONSE_TYPES_SUPPORTED, OAUTH_ISSUER } from './lib/constants.js'
+import { buildScopesField, buildAuthRemediationLines, buildQuotaProjectWarning } from './lib/util/auth_messages.js'
+import { TAGS, SCOPES } from './lib/constants.js'
 
 // Import Real Clients
 import { RealAdminSdkClient } from './lib/api/real_admin_sdk_client.js'
@@ -72,6 +77,89 @@ function shouldStartStdio(gcpInfo) {
 }
 
 /**
+ * Probes Application Default Credentials and inspects the access token.
+ *
+ * Returns `{ valid: false }` when no usable credentials are configured.
+ * When valid, hits the Google tokeninfo endpoint to read the granted
+ * scopes off the access token, then diffs them against `requiredScopes`.
+ * `cloud-platform` is treated as implicitly covering the
+ * `service.management*` family (matches Google's IAM behavior).
+ *
+ * `scopesKnown` is false when tokeninfo could not be reached or rejected
+ * the token (e.g. some self-signed JWT flows) — callers should not
+ * report scope status as authoritative in that case.
+ * @param {string[]} requiredScopes - The OAuth scopes the server needs.
+ * @returns {Promise<{valid: boolean, email: ?string, missingScopes: string[], scopesKnown: boolean}>} Probe result.
+ */
+async function probeADC(requiredScopes) {
+  const empty = {
+    valid: false,
+    email: null,
+    missingScopes: [],
+    scopesKnown: false,
+    credentialType: null,
+    quotaProject: null,
+  }
+  // Test mode (fake API server) bypasses real ADC; skipping the probe
+  // keeps test startup fast and avoids hitting Google in CI.
+  if (process.env.GOOGLE_API_ROOT_URL) {
+    return empty
+  }
+  // The probe touches the network twice (token endpoint, then tokeninfo).
+  // Cap it so a slow or offline environment can't hold the banner
+  // indefinitely; the server itself works regardless of whether the
+  // probe completes.
+  const PROBE_TIMEOUT_MS = 8000
+  const work = (async () => {
+    try {
+      const auth = new GoogleAuth()
+      const client = await auth.getClient()
+      const { token } = await client.getAccessToken()
+      if (!token) {
+        return empty
+      }
+      let email = client.email || null
+      let granted = []
+      try {
+        const info = await new OAuth2Client().getTokenInfo(token)
+        email = email || info.email || null
+        granted = info.scopes || []
+      } catch {
+        // tokeninfo rejects opaque or self-signed JWT tokens; surface as unknown.
+      }
+      const grantedSet = new Set(granted)
+      const cloudPlatform = grantedSet.has('https://www.googleapis.com/auth/cloud-platform')
+      const missingScopes = requiredScopes.filter(s => {
+        if (grantedSet.has(s)) {
+          return false
+        }
+        if (cloudPlatform && s.startsWith('https://www.googleapis.com/auth/service.management')) {
+          return false
+        }
+        return true
+      })
+      return {
+        valid: true,
+        email,
+        missingScopes,
+        scopesKnown: granted.length > 0,
+        credentialType: client.constructor?.name || null,
+        quotaProject: process.env.GOOGLE_CLOUD_QUOTA_PROJECT || client.quotaProjectId || null,
+      }
+    } catch {
+      return empty
+    }
+  })()
+  let timer
+  const timeout = new Promise(resolve => {
+    timer = setTimeout(() => resolve(empty), PROBE_TIMEOUT_MS)
+  })
+  const result = await Promise.race([work, timeout])
+  clearTimeout(timer)
+  return result
+}
+
+/**
  * Initializes and configures the MCP server instance.
  * @param {object} gcpInfo - The detected GCP environment metadata
  * @param {object} sharedSessionState - The shared session state for cross-request persistence
@@ -81,7 +169,7 @@ async function getServer(gcpInfo, sharedSessionState) {
   const server = new McpServer(
     {
       name: 'chrome-enterprise-premium',
-      version: '1.0.0',
+      version: pkg.version,
     },
     {
       capabilities: {
@@ -160,8 +248,10 @@ async function main() {
       }
     })
 
-    // Calculate Knowledge DB articles
-    const knowledgeDir = process.env.KNOWLEDGE_DB_PATH || './lib/knowledge'
+    // Calculate Knowledge DB articles. Resolve the default path relative to
+    // this module so `npx` invocations from arbitrary CWDs still find the
+    // bundled corpus.
+    const knowledgeDir = process.env.KNOWLEDGE_DB_PATH || fileURLToPath(new URL('./lib/knowledge', import.meta.url))
     let articleCount = 0
     try {
       const files = await fs.readdir(knowledgeDir)
@@ -175,14 +265,33 @@ async function main() {
         .filter(flag => featureFlags.isEnabled(flag))
         .join(', ') || 'None'
 
+    const requiredScopes = Object.values(SCOPES)
+    const adc = await probeADC(requiredScopes)
+
     printBanner({
       transport: isStdio ? 'Stdio' : ['SSE/HTTP', `(Port: ${process.env.PORT || '0'})`],
-      auth: isStdio ? ['None', '(Local channel)'] : ['OAuth', '(Enforced)'],
-      apiCreds: isStdio ? ['ADC', `(${process.env.USER || 'user'}@google.com)`] : ['Dynamic', '(End-user credentials)'],
-      scopes: isStdio ? '🟢 All valid' : 'Checked per request',
+      auth: isStdio ? ['None', '(Local channel)'] : ['None', '(Unauthenticated)'],
+      apiCreds: adc.valid ? ['ADC', adc.email ? `(${adc.email})` : '(detected)'] : ['ADC', '(not configured)'],
+      scopes: buildScopesField(adc, requiredScopes),
       dataAccess: process.env.GOOGLE_API_ROOT_URL ? 'Fake' : 'Production',
       knowledge: ['lib/knowledge', `(${articleCount} articles)`],
     })
+    const remediation = buildAuthRemediationLines(adc, requiredScopes)
+    if (remediation) {
+      console.log()
+      for (const line of remediation) {
+        console.log(dim(line))
+      }
+      console.log()
+    }
+    const quotaWarning = buildQuotaProjectWarning(adc)
+    if (quotaWarning) {
+      console.log()
+      for (const line of quotaWarning) {
+        console.log(dim(line))
+      }
+      console.log()
+    }
     console.log(dim(`Active Experiments: ${activeExps}`))
 
     // Maintain session state globally for all server connections
@@ -203,7 +312,7 @@ async function main() {
       const app = express()
       app.use(express.json())
 
-      app.post('/mcp', oauthMiddleware, async (req, res) => {
+      app.post('/mcp', async (req, res) => {
         const server = await getServer(gcpInfo, sharedSessionState)
         try {
           const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
@@ -243,28 +352,6 @@ async function main() {
 
       const sseTransports = {}
 
-      const getOAuthProtectedResource = (_req, res) => {
-        res.json({
-          resource: process.env.OAUTH_PROTECTED_RESOURCE,
-          authorization_servers: [process.env.OAUTH_AUTHORIZATION_SERVER],
-          scopes_supported: Object.values(SCOPES),
-          bearer_methods_supported: [...BEARER_METHODS_SUPPORTED],
-        })
-      }
-
-      const getOAuthAuthorizationServer = (_req, res) => {
-        res.json({
-          issuer: OAUTH_ISSUER,
-          authorization_endpoint: process.env.OAUTH_AUTHORIZATION_ENDPOINT,
-          token_endpoint: process.env.OAUTH_TOKEN_ENDPOINT,
-          scopes_supported: Object.values(SCOPES),
-          response_types_supported: [...RESPONSE_TYPES_SUPPORTED],
-        })
-      }
-
-      app.get('/.well-known/oauth-protected-resource', getOAuthProtectedResource)
-      app.get('/.well-known/oauth-authorization-server', getOAuthAuthorizationServer)
-
       app.get('/sse', async (_req, res) => {
         logger.info(`${TAGS.MCP} /sse Received request`)
         const server = await getServer(gcpInfo, sharedSessionState)
@@ -292,7 +379,7 @@ async function main() {
         const address = server.address()
         if (address) {
           const assignedPort = address.port
-          // Use console.log directly so that tests waiting for this output (e.g. oauth-endpoints.test.js)
+          // Use console.log directly so smoke tests waiting for this line
           // are not silenced by CEP_LOG_LEVEL=SILENT.
           console.log(`${TAGS.MCP} Chrome Enterprise Premium MCP server listening on port ${assignedPort}`)
         }

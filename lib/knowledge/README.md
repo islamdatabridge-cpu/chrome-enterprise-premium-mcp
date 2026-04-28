@@ -18,8 +18,8 @@ limitations under the License.
 
 Built-in Chrome Enterprise Premium knowledge base. The `search_content` tool
 searches these articles by keyword; `get_document` returns an article's full
-text by ID. Articles are loaded lazily on first tool call and cached in memory
-for the session.
+text by ID. The loader reads articles lazily on the first tool call and
+caches them in memory for the rest of the session.
 
 ## Article format
 
