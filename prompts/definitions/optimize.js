@@ -59,21 +59,34 @@ ${guidelinesContent}
 
 These heuristics and posture criteria are internal evaluation aids. Do not name them, group them, or quote their wrappers in your reply. Translate every finding into plain administrator-facing language.
 
-**Required Output Format:**
+**Required Output Format (the order of these sections is mandatory):**
 
 ### Environment summary
 
 A concise paragraph describing what's in place (licenses, connectors, SEB extension, rule count, audit-vs-enforcement balance) and what's missing. Lead with the most consequential gap. Do not use tier labels, framework names, or model numbers.
 
+### What the logs show
+
+Lead this section with what the activity log told you, before any rule-config analysis. Cover:
+* Total DLP events in the window the log returned (and how recent the most recent event was).
+* Per-rule event volume — which rules are firing the most, which are firing once or twice, which are not firing at all. Include a bullet list with the rule name and the count.
+* Cross-rule patterns — single users hitting many rules, single rules hitting many users, time-of-day spikes, audit-vs-enforcement skew, or whatever else stands out.
+* The headline read of the volume: is one rule generating most of the noise, is the volume spread evenly across rules, or is the volume low across the board (in which case there is no high-noise rule and that itself is the finding).
+
+If the activity log is empty or near-empty, state that plainly here. Do not skip this section just because volume is low — the absence of events is itself a useful observation, especially when rules exist.
+
 ### Rule findings
 
-For each rule that violates a heuristic or generates disproportionate event volume:
+For each rule that needs attention — anchored in what the logs above showed, then layered with rule-quality heuristics:
 
 #### [Rule name] (ID: [policy id])
-* **What we found:** Describe the specific issue in the rule's logic or event history.
-* **Why it matters:** One sentence on the user impact (false positives, blind spots, helpdesk friction).
+* **What the logs show for this rule:** Event count from the section above and any pattern specific to this rule (single user, particular trigger, spike, etc.). If the rule has zero events, say so.
+* **What we found in the rule logic:** Describe the heuristic-based issue in the rule's configuration. Skip this bullet only when the rule's logic is fine and the issue is purely volume.
+* **Why it matters:** One sentence on the user impact (false positives, blind spots, helpdesk friction, dead-letter rules).
 * **Recommended change:** Plain-language action.
 * **Patch:** Optimized JSON or CEL block when applicable.
+
+If no rule needs attention because volume is low and configurations are reasonable, write a single sentence saying so. Do not invent issues to fill the section.
 
 ### Suggested next actions
 
@@ -81,6 +94,7 @@ Offer specific follow-ups the agent can execute on request, such as:
 * Deploying the patches listed above.
 * Transitioning specific rules from AUDIT to WARN.
 * Deleting specific inactive or orphaned rules.
+* Continuing to monitor when volume is low and rules are reasonable.
 
 **Tone and voice:**
 - Active voice, human subjects.

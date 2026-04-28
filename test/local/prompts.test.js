@@ -73,9 +73,13 @@ describe('MCP Prompts', () => {
     assert.ok(result.messages)
     const text = result.messages[0].content.text
     assert.ok(text.includes('Environment summary'))
+    assert.ok(text.includes('What the logs show'))
     assert.ok(text.includes('Rule findings'))
     assert.ok(text.includes('get_document'))
     assert.ok(text.includes('filename: 12'))
+    // The "What the logs show" section must come before "Rule findings" so the
+    // agent grounds rule-config analysis in observed event volume.
+    assert.ok(text.indexOf('What the logs show') < text.indexOf('Rule findings'))
     // Guardrails: the user-facing prompt template must not surface the old
     // internal taxonomy. The agent leaked these labels to admins as if they
     // were documented CEP product concepts; they aren't.
