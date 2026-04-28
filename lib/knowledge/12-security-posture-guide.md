@@ -10,36 +10,50 @@ These criteria help the agent decide what to recommend after running `diagnose_e
 
 ## Step 1: Are the prerequisites in place?
 
-Look for missing CEP licenses, unconfigured Content Analysis Connectors, or a missing Secure Enterprise Browser (SEB) extension. If any are missing, recommend:
+Look for missing CEP licenses, unconfigured Content Analysis Connectors, or a missing Secure Enterprise Browser (SEB) extension.
+
+**Directive**: If any prerequisite is missing, the agent MUST recommend closing those gaps before suggesting any DLP rule work. DLP rules cannot scan content while connectors are off, and data-masking features depend on the SEB extension. Surface this dependency explicitly; do not list rule recommendations alongside foundation gaps.
+
+**What to recommend**:
 
 1.  **Licenses**: Assign CEP licenses to all managed users.
 2.  **Connectors**: Enable and configure all Content Analysis Connectors (Upload, Download, Paste, Print, URL Check) at the Root OU.
 3.  **SEB extension**: Force-install the Secure Enterprise Browser extension (ID: `ekajlcmdfcigmdbphhifahdfjbkciflj`) so the environment can use advanced features like data masking.
 
-If the prerequisites are missing, the recommendations below do not yet apply — those gaps must close first.
-
 ## Step 2: Are there any DLP rules?
 
-If the prerequisites are in place but the environment has zero or very few rules:
+If the prerequisites are in place but the environment has zero or very few rules.
 
-1.  **Telemetry dependency**: Security logs for data-centric events (e.g., sensitive-data hits) only populate when a corresponding rule is active. If logs are empty, the absence of rules is the reason.
-2.  **Visibility options**:
+**Directive**: The agent MUST analyze the activity log first to anchor any rule recommendations in real-world usage patterns, even though the log will be sparse here (security logs for data-centric events only populate when a rule is active). New rules MUST start in `AUDIT` mode; do not propose creating a rule directly in `WARN` or `BLOCK` from this state.
+
+**What to recommend (in order)**:
+
+1.  **Activity-log review first**: Call `get_chrome_activity_log` and report what's in it. If sparse or empty, name that explicitly — that's the consequence of having no rules.
+2.  **Pick a deployment style**:
     - **Broad baseline**: Deploy broad `AUDIT`-mode rules (a "starter pack") for a comprehensive view of high-risk data flows.
     - **Incremental discovery**: For organizations with strict change controls, deploy targeted `AUDIT` rules covering known-sensitive domains or specific high-risk detectors first.
-3.  **Data-driven refinement**: Once `AUDIT` logs populate, use `get_chrome_activity_log` to identify patterns and move on to tuning.
+3.  **Plan the next review**: Once `AUDIT` logs populate, the agent should re-run the assessment to identify patterns and move on to tuning.
 
 ## Step 3: Are the existing rules tuned?
 
-If rules exist but are predominantly in `AUDIT` mode:
+If rules exist but are predominantly in `AUDIT` mode.
 
-1.  **Log review**: Analyze audit logs to spot noise or false positives.
-2.  **Rule tuning**: Adjust match thresholds, refine URL categories, add destination constraints based on real-world usage.
-3.  **Trigger coverage**: Confirm rules cover the relevant triggers (Upload, Paste, Download, Print, URL Check) for the data types in scope.
+**Directive**: The agent MUST prioritize tuning noisy audit-only rules over adding new ones. Before recommending changes, correlate `get_chrome_activity_log` events to specific rules and identify the highest-volume offenders. A rule that fires disproportionately is a false-positive risk, not proof of value.
+
+**What to recommend (priority order)**:
+
+1.  **Identify the noisy rule(s)**: Use the activity log to find rules generating a disproportionate share of events. Lead the recommendations with those rules.
+2.  **Tighten the noisy rule**: Adjust match thresholds, refine URL categories, or add destination constraints based on observed traffic. Provide a concrete patch (CEL or JSON) when proposing changes.
+3.  **Confirm trigger coverage**: After tuning, verify rules cover the relevant triggers (Upload, Paste, Download, Print, URL Check) for the data types in scope.
 
 ## Step 4: Are the rules enforcing?
 
-If rules are tuned and high-fidelity:
+If rules are tuned and high-fidelity (in `WARN` or `BLOCK`, with low false-positive rates).
 
-1.  **Transition to enforcement**: Move stable, high-fidelity rules from `AUDIT` to `WARN` or `BLOCK`.
-2.  **Data masking**: Apply hard or light obfuscation for sensitive data inside the browser for specific URLs.
-3.  **Continuous audit**: Review `BLOCK` events weekly to keep business continuity in view.
+**Directive**: The agent MUST focus on maintaining enforcement and expanding coverage carefully. Do not recommend new `BLOCK` rules without first staging them in `AUDIT` mode (the safety guardrail in the system prompt enforces this — `BLOCK` rules cannot be created in `ACTIVE` state by the agent). Continuous-audit recommendations take priority over policy expansion.
+
+**What to recommend (focus areas)**:
+
+1.  **Maintain enforcement**: Keep stable, high-fidelity rules in `WARN` or `BLOCK`. Recommend a weekly review of `BLOCK` events to keep business continuity in view.
+2.  **Expand coverage carefully**: When proposing new coverage, stage it in `AUDIT` mode first; promote to `WARN` or `BLOCK` only after the audit logs confirm low false-positive rates.
+3.  **Apply data masking**: Implement hard or light obfuscation for sensitive data in the browser for specific URLs where that's appropriate.
