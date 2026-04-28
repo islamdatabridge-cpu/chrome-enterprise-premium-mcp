@@ -270,6 +270,16 @@ integration tests, and a smoke test against the in-process fake API server;
 no credentials needed. After merge, `npm run postsubmit` re-runs the full
 presubmit suite plus a real-API integration pass.
 
+Presubmit is **read-only**. If formatting or lint fails, run
+`npm run format` and `npm run lint:fix` to fix, then re-run. The husky
+pre-commit hook auto-fixes staged files via lint-staged, so commits from a
+clean working tree usually pass without manual fixup.
+
+GitHub Actions runs the same checks on every pull request as four parallel
+jobs (`lint`, `test-unit`, `test-integration-fake`, `test-smoke`); each
+failure shows up as a separate PR check. The workflow is at
+[`.github/workflows/node.js.yml`](.github/workflows/node.js.yml).
+
 ```bash
 npm run presubmit               # Required before every PR
 npm run postsubmit              # After merge (real API credentials)
