@@ -116,7 +116,7 @@ async function main() {
   const ids = (args.id || process.env.EVAL_IDS)?.split(',').map(t => t.trim())
   const priority = args.priority?.split(',').map(t => t.trim())
   const numRuns = parseInt(args.runs, 10) || 1
-  const concurrency = parseInt(args.concurrency, 10) || 10
+  const concurrency = parseInt(args.concurrency, 10) || 5
   const delayMs = parseInt(args.delay, 10) || 0
 
   // Load evals
@@ -355,7 +355,7 @@ async function main() {
     writeResults(results, args.output)
 
     // Automatically generate AI failure summary for CI runs
-    if (Array.isArray(args.priority) && args.priority.some(p => p === 'P0') && hasFailures) {
+    if (Array.isArray(priority) && priority.some(p => p === 'P0') && hasFailures) {
       console.log(`\nP0 tests failed. Generating AI summary for CI...`)
       try {
         const { GoogleGenerativeAI } = await import('@google/generative-ai')
