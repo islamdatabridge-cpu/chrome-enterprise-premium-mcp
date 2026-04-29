@@ -111,8 +111,15 @@ export function loadEvalsFromFile(filepath, globalConfig) {
       ? perEvalForbidden
       : [...globalConfig.forbiddenPatterns, ...perEvalForbidden]
 
+    const evalId = String(frontmatter.id)
+    if (frontmatter.scenario && frontmatter.fixtures && frontmatter.fixtures.length > 0) {
+      throw new Error(
+        `Eval case ${evalId} sets both \`fixtures:\` and \`scenario:\` — these are mutually exclusive (scenario replaces state, fixtures merge into state). Pick one.`
+      )
+    }
+
     evals.push({
-      id: String(frontmatter.id),
+      id: evalId,
       category: frontmatter.category || path.basename(path.dirname(filepath)),
       priority: (frontmatter.priority || 'P2').toUpperCase(),
       tags: frontmatter.tags || [],

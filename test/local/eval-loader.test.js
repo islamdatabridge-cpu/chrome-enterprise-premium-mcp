@@ -16,6 +16,8 @@ limitations under the License.
 
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadGlobalConfig, loadEvalsFromFile, loadAllEvals } from '../evals/lib/loader.js'
@@ -125,6 +127,35 @@ describe('Eval Loader', () => {
       for (let i = 1; i < evals.length; i++) {
         const cmp = evals[i - 1].id.localeCompare(evals[i].id, undefined, { numeric: true })
         assert.ok(cmp <= 0, `${evals[i - 1].id} should come before ${evals[i].id}`)
+      }
+    })
+  })
+
+  describe('mutual exclusion of fixtures and scenario', () => {
+    test('When a case sets both fixtures and scenario, then loading throws a clear error', () => {
+      const config = loadGlobalConfig(evalsDir)
+      const content = [
+        'id: mutex-test',
+        'scenario: some-scenario',
+        'fixtures:',
+        '  - some-fixture.json',
+        '',
+        '## Prompt',
+        '',
+        'test prompt',
+      ].join('\n')
+      const tmpFile = path.join(os.tmpdir(), `eval-mutex-test-${Date.now()}.md`)
+      fs.writeFileSync(tmpFile, content, 'utf8')
+      try {
+        assert.throws(
+          () => loadEvalsFromFile(tmpFile, config),
+          err =>
+            err.message.includes('mutex-test') &&
+            err.message.includes('fixtures:') &&
+            err.message.includes('scenario:'),
+        )
+      } finally {
+        fs.unlinkSync(tmpFile)
       }
     })
   })
