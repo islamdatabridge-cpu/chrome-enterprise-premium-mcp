@@ -114,7 +114,7 @@ export function loadEvalsFromFile(filepath, globalConfig) {
     const evalId = String(frontmatter.id)
     if (frontmatter.scenario && frontmatter.fixtures && frontmatter.fixtures.length > 0) {
       throw new Error(
-        `Eval case ${evalId} sets both \`fixtures:\` and \`scenario:\` — these are mutually exclusive (scenario replaces state, fixtures merge into state). Pick one.`
+        `Eval case ${evalId} sets both \`fixtures:\` and \`scenario:\` — these are mutually exclusive (scenario replaces state, fixtures merge into state). Pick one.`,
       )
     }
 
