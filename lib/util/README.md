@@ -31,8 +31,6 @@ logging, retry, GCP detection, CEL validation, and feature flags.
   `gcloud` installation and suggests fix commands.
 - `google-auth-provider.js` — Production auth provider class. Wraps
   `getAuthClient` for use by real API clients.
-- `fake-auth-provider.js` — Test auth provider. Redirects requests to a local
-  mock server via `GOOGLE_API_ROOT_URL`.
 
 **API plumbing**
 
