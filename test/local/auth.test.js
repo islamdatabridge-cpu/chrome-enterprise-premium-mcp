@@ -194,7 +194,7 @@ describe('Auth', () => {
       const message = getAuthErrorMessage(error)
 
       assert.match(message, /Google Cloud Console/)
-      assert.match(message, /console.cloud.google.com\/cloud-resource-manager/)
+      assert.match(message, /console\.cloud\.google\.com\/cloud-resource-manager/)
       assert.doesNotMatch(message, /gcloud projects list/)
     })
 

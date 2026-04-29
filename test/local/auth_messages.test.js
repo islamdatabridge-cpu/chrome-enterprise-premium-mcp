@@ -211,7 +211,7 @@ describe('buildQuotaProjectWarning', () => {
     assert.ok(Array.isArray(lines), 'expected an array of lines')
     assert.match(lines[0], /quota project/i, 'first line should frame this as a quota-project requirement')
     assert.doesNotMatch(lines[0], /billing project/i, 'must say "quota project", not "billing project"')
-    const linkLine = lines.find(l => l.includes('console.cloud.google.com'))
+    const linkLine = lines.find(l => /\bconsole\.cloud\.google\.com\b/.test(l))
     assert.ok(linkLine, `expected a link to the cloud console project selector; got: ${JSON.stringify(lines)}`)
     const cmdLine = lines.find(l => l.startsWith('gcloud auth application-default set-quota-project'))
     assert.ok(cmdLine, `expected the set-quota-project command; got: ${JSON.stringify(lines)}`)

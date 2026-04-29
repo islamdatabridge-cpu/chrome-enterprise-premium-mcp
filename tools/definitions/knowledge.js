@@ -28,6 +28,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import matter from 'gray-matter'
 import axios from 'axios'
+import * as cheerio from 'cheerio'
 import { FLAGS } from '../../lib/util/feature_flags.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -39,52 +40,50 @@ let isDbLoading = false
 let dbLoadingPromise = null
 
 /**
+ * Boilerplate phrases that frequently appear in devsite/help-center pages
+ * and add noise to the LLM context without contributing meaning.
+ */
+const BOILERPLATE_PATTERNS = [
+  /Google Workspace Help/g,
+  /Administrators/g,
+  /Security & data protection/g,
+  /Guides/g,
+  /Send feedback/g,
+  /Stay organized with collections Save and categorize content based on your preferences\./g,
+  /Got 5 mins\? Help us with a quick survey about Google Workspace admin help center tasks\./g,
+  /Compare your edition/g,
+]
+
+/**
  * Strips HTML tags and extracts main content from a page to optimize token usage.
+ * Uses cheerio (a real HTML parser) rather than regex so browser-lenient
+ * markup like `</script\t\nbar>` or unclosed `<style>` blocks can't smuggle
+ * tag substrings into the LLM-bound output.
  * @param {string} html Raw HTML content.
  * @returns {string} Cleaned text content.
  */
 function cleanHtml(html) {
-  // Try to extract the article or main body first
-  const bodyMatch =
-    html.match(/<article[^>]*>([\s\S]*?)<\/article>/i) ||
-    html.match(/<div class="devsite-article-body[^>]*>([\s\S]*?)<\/div>/i) ||
-    html.match(/<div class="cc"[^>]*>([\s\S]*?)<\/div>/i) ||
-    html.match(/<main[^>]*>([\s\S]*?)<\/main>/i)
+  const $ = cheerio.load(html)
 
-  let content = bodyMatch ? bodyMatch[1] : html
+  // Drop non-content blocks entirely (cheerio removes the element + descendants).
+  $('script, style, nav, header, footer, devsite-toc').remove()
 
-  // Strip scripts, styles, and other non-content blocks
-  content = content
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<nav[\s\S]*?<\/nav>/gi, '')
-    .replace(/<header[\s\S]*?<\/header>/gi, '')
-    .replace(/<footer[\s\S]*?<\/footer>/gi)
-    .replace(/<devsite-toc[^>]*>([\s\S]*?)<\/devsite-toc>/gi, '')
+  // Pick the most-specific main-content container; fall back to <body>.
+  const root =
+    $('article').first().get(0) ||
+    $('div.devsite-article-body').first().get(0) ||
+    $('div.cc').first().get(0) ||
+    $('main').first().get(0) ||
+    $('body').get(0) ||
+    $.root().get(0)
 
-  // Aggressively strip boilerplate and support site headers
-  content = content
-    .replace(/Google Workspace Help/g, '')
-    .replace(/Administrators/g, '')
-    .replace(/Security & data protection/g, '')
-    .replace(/Guides/g, '')
-    .replace(/Send feedback/g, '')
-    .replace(/Stay organized with collections Save and categorize content based on your preferences\./g, '')
-    .replace(/Got 5 mins\? Help us with a quick survey about Google Workspace admin help center tasks\./g, '')
-    .replace(/Compare your edition/g, '')
+  let text = $(root).text()
 
-  // Strip all remaining tags but preserve content
-  content = content.replace(/<[^>]+>/g, ' ')
+  for (const pattern of BOILERPLATE_PATTERNS) {
+    text = text.replace(pattern, '')
+  }
 
-  // Normalize whitespace and unescape common entities
-  return content
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return text.replace(/\s+/g, ' ').trim()
 }
 
 /**

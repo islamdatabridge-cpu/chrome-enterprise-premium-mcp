@@ -25,6 +25,21 @@ limitations under the License.
 import express from 'express'
 import { randomUUID } from 'node:crypto'
 
+/**
+ * Reserved prototype keys that must not be set on a plain object via
+ * arbitrary fixture input — assigning to any of these would mutate
+ * Object.prototype and affect every other object in the process.
+ */
+const PROTO_POLLUTING_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/**
+ * @param {string|number|undefined} key
+ * @returns {boolean} true when the key is safe to use as a plain-object property.
+ */
+function isSafeKey(key) {
+  return key !== undefined && !PROTO_POLLUTING_KEYS.has(String(key))
+}
+
 /** Initial state factory */
 
 /**
@@ -417,13 +432,16 @@ export function createFakeApp() {
       const orgUnitId = targetResource.split('/').pop() || 'unknown'
       const schema = policyValue.policySchema
 
+      if (!isSafeKey(customerId) || !isSafeKey(orgUnitId) || !isSafeKey(schema)) {
+        // Skip batch entries whose keys would mutate Object.prototype.
+        continue
+      }
       if (!state.connectorPolicies[customerId]) {
         state.connectorPolicies[customerId] = {}
       }
       if (!state.connectorPolicies[customerId][orgUnitId]) {
         state.connectorPolicies[customerId][orgUnitId] = {}
       }
-
       state.connectorPolicies[customerId][orgUnitId][schema] = [
         {
           value: {
@@ -442,7 +460,10 @@ export function createFakeApp() {
     const customerId = state.defaultCustomerId
     let policies = Object.values(state.policies).filter(p => p.customer === `customers/${customerId}`)
 
-    const filter = req.query.filter
+    // Express query strings can be string | string[] | ParsedQs depending on
+    // ?filter=… vs ?filter=…&filter=…; coerce to a single string before
+    // pattern-matching so .includes(...) doesn't behave like Array#includes.
+    const filter = typeof req.query.filter === 'string' ? req.query.filter : ''
     if (filter) {
       if (
         filter.includes('setting.type.startsWith("settings/rule.dlp")') ||
@@ -633,6 +654,9 @@ export function createFakeApp() {
       state.activities.push(...data.items)
     } else if (data.kind === 'licensing#licenseAssignment') {
       const customerId = state.defaultCustomerId
+      if (!isSafeKey(data.productId) || !isSafeKey(data.skuId)) {
+        return
+      }
       if (!state.licenses[customerId]) {
         state.licenses[customerId] = {}
       }
@@ -645,11 +669,11 @@ export function createFakeApp() {
       state.licenses[customerId][data.productId][data.skuId].push(data)
     } else if (data.kind === 'licensing#licenseAssignmentList') {
       const customerId = state.defaultCustomerId
-      if (!state.licenses[customerId]) {
-        state.licenses[customerId] = {}
-      }
       state.licenses[customerId] = {} // Clear existing
       data.items.forEach(item => {
+        if (!isSafeKey(item.productId) || !isSafeKey(item.skuId)) {
+          return
+        }
         if (!state.licenses[customerId][item.productId]) {
           state.licenses[customerId][item.productId] = {}
         }

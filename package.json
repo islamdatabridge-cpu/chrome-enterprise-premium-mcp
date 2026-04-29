@@ -39,6 +39,7 @@
     "@dotenvx/dotenvx": "^1.52.0",
     "@modelcontextprotocol/sdk": "^1.11.0",
     "axios": "^1.7.2",
+    "cheerio": "^1.2.0",
     "express": "^5.1.0",
     "google-auth-library": "^10.4.0",
     "googleapis": "^166.0.0",

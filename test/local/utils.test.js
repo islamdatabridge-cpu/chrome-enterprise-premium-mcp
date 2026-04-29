@@ -197,7 +197,7 @@ describe('Tool Utils', () => {
       assert.strictEqual(result.isError, true)
       assert.ok(result.content[0].text.includes('Permission denied'))
       assert.ok(result.content[0].text.includes('gcloud auth application-default login'))
-      assert.ok(result.content[0].text.includes('admin.googleapis.com'))
+      assert.match(result.content[0].text, /\badmin\.googleapis\.com\b/)
       assert.ok(!result.structuredContent)
     })
 
@@ -246,7 +246,7 @@ describe('Tool Utils', () => {
       assert.strictEqual(result.isError, true)
       assert.ok(result.content[0].text.includes('Permission denied'))
       assert.ok(result.content[0].text.includes('/mcp reauth'))
-      assert.ok(result.content[0].text.includes('admin.googleapis.com'))
+      assert.match(result.content[0].text, /\badmin\.googleapis\.com\b/)
       assert.ok(!result.content[0].text.includes('gcloud auth application-default login'))
     })
 
