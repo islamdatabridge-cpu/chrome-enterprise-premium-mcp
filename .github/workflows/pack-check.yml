@@ -18,5 +18,7 @@ jobs:
       - run: npm ci
       - name: Snapshot tarball file list
         run: |
-          npm pack --dry-run --json | jq -r '.[0].files[].path' | sort > /tmp/actual-tarball.txt
+          # LC_ALL=C forces a byte-wise sort so the snapshot matches across machines
+          # regardless of locale (BSD/GNU sort default to locale-aware ordering).
+          npm pack --dry-run --json | jq -r '.[0].files[].path' | LC_ALL=C sort > /tmp/actual-tarball.txt
           diff -u .github/expected-tarball.txt /tmp/actual-tarball.txt
