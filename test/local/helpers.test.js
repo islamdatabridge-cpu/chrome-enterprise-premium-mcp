@@ -52,24 +52,7 @@ describe('Helpers', () => {
       assert.strictEqual(result, 'success')
     })
 
-    test('When PERMISSION_DENIED (code 7) occurs, then it retries and eventually succeeds', async () => {
-      let attempts = 0
-      const fn = async () => {
-        attempts++
-        if (attempts === 1) {
-          const error = new Error('Permission denied')
-          error.code = 7
-          throw error
-        }
-        return 'success'
-      }
-
-      const result = await callWithRetry(fn, 'test retry')
-      assert.strictEqual(result, 'success')
-      assert.strictEqual(attempts, 2)
-    })
-
-    test('When PERMISSION_DENIED (code 7) occurs repeatedly, then it fails after max retries', async () => {
+    test('When PERMISSION_DENIED (code 7) occurs, then it surfaces immediately without retry', async () => {
       let attempts = 0
       const fn = async () => {
         attempts++
@@ -80,12 +63,11 @@ describe('Helpers', () => {
 
       await assert.rejects(
         async () => {
-          await callWithRetry(fn, 'test max retries')
+          await callWithRetry(fn, 'test immediate throw')
         },
         { code: 7 },
       )
-      // Max retries is 3, so 1 initial + 3 retries = 4 attempts total
-      assert.strictEqual(attempts, 4)
+      assert.strictEqual(attempts, 1)
     })
 
     test('When QUOTA_PROJECT_NOT_SET error occurs, then it throws a helpful message and does not retry', async () => {
