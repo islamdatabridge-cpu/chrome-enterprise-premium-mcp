@@ -47,7 +47,6 @@ The SEB extension is REQUIRED for advanced Chrome Enterprise Premium features li
         customerId: z.string().optional().describe('The Chrome customer ID (e.g. C012345).'),
         orgUnitId: z
           .string()
-          .describe('The ID of the organizational unit.')
           .describe('The ID of the organizational unit to check.'),
       },
       outputSchema: z
