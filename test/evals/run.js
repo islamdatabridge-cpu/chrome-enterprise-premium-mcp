@@ -47,7 +47,7 @@ import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
 
 import { loadAllEvals, loadGlobalConfig } from './lib/loader.js'
-import { runChecks } from './lib/assertions.js'
+import { runChecks, checkForbidden, checkRequired } from './lib/assertions.js'
 import { createJudge } from './lib/judge.js'
 import { createEvalAgent } from './lib/agent.js'
 import { printConsole, writeResults } from './lib/reporter.js'
@@ -126,7 +126,14 @@ async function main() {
   if (dryRun) {
     console.log(`Dry run: validating ${evals.length} eval(s) against their golden responses...\n`)
     const results = evals.map(evalCase => {
-      const deterministic = runChecks(evalCase.goldenResponse, evalCase.expectedTools, evalCase)
+      const forbidden = checkForbidden(evalCase.goldenResponse, evalCase.forbiddenPatterns)
+      const required = checkRequired(evalCase.goldenResponse, evalCase.requiredPatterns)
+      const failures = [...forbidden.failures, ...required.failures]
+      const deterministic = {
+        passed: failures.length === 0,
+        failures,
+        toolsSkipped: true,
+      }
       return {
         id: evalCase.id,
         category: evalCase.category,
@@ -134,7 +141,7 @@ async function main() {
         passed: deterministic.passed,
         deterministic,
         judge: { passed: true, reasoning: 'skipped (dry run)' },
-        toolCalls: evalCase.expectedTools.map(name => ({ name, args: {} })),
+        toolCalls: [],
         responseText: evalCase.goldenResponse,
         durationMs: 0,
       }

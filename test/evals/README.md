@@ -134,7 +134,9 @@ audit mode is silent"), use the judge instead.
 
 **Expected tool validation** checks that every tool listed in `expected_tools`
 was actually called by the agent. This catches a common failure mode: the agent
-_describes_ what it would do instead of actually doing it.
+_describes_ what it would do instead of actually doing it. Tool checks are
+skipped in `--dry-run` mode, since no agent runs and there are no actual tool
+calls to validate.
 
 ### Layer 2: LLM-as-judge (Gemini)
 
