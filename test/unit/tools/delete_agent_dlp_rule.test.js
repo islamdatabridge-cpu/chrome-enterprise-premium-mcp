@@ -70,8 +70,7 @@ describe('delete_agent_dlp_rule tool handler', () => {
     assert.ok(!deleteCalled, 'deleteDlpRule should NOT have been called')
     assert.ok(result.content[0].text.includes('Admin Console'))
     assert.ok(
-      result.content[0].text.includes('policies/akabc123') ||
-        result.content[0].text.includes('policies%2Fakabc123'),
+      result.content[0].text.includes('policies/akabc123') || result.content[0].text.includes('policies%2Fakabc123'),
       'response text should reference the policy',
     )
   })
@@ -129,6 +128,9 @@ describe('delete_agent_dlp_rule tool handler', () => {
     const result = await handler({ policyName: 'policies/akabc123' }, { authToken: 'token-abc' })
 
     assert.ok(result.isError, 'result should be an error response')
-    assert.ok(result.content[0].text.includes('Service Unavailable'), 'error text should include the original error message')
+    assert.ok(
+      result.content[0].text.includes('Service Unavailable'),
+      'error text should include the original error message',
+    )
   })
 })

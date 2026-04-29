@@ -72,8 +72,7 @@ export function registerDeleteAgentDlpRuleTool(server, options, sessionState) {
             rule = await cloudIdentityClient.getDlpRule(policyName, authToken)
           } catch (error) {
             const status = error.response?.status
-            const isNotFound =
-              error.code === 5 || status === 404 || error.message?.toLowerCase().includes('not found')
+            const isNotFound = error.code === 5 || status === 404 || error.message?.toLowerCase().includes('not found')
             if (isNotFound) {
               throw new Error(`Rule not found: ${policyName}`)
             }
