@@ -17,7 +17,7 @@ Have there been any recent data transfer violations or unscanned files?
 
 ## Golden Response
 
-Yes, there was a CONTENT_UNSCANNED event — a file download by tim@cep-netnew.cc
+Yes, there was a CONTENT_UNSCANNED event — a file download by alex@cep-netnew.cc
 was not scanned by the DLP engine. This typically means the file was
 password-protected, too large, or the download connector wasn't configured to
 scan it.
