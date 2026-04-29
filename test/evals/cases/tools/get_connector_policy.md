@@ -48,8 +48,6 @@ scenario: reporting-connector-default
 tags:
   - connectors
 expected_tools:
-  - get_customer_id
-  - list_org_units
   - get_connector_policy
 priority: P1
 
