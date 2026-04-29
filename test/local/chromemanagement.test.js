@@ -137,7 +137,7 @@ describe('Chrome Management API', () => {
       assert.ok(result.content[1].text.includes('```json'))
     })
 
-    test('When API call fails, then it returns an error message', async () => {
+    test('When API call fails, then it surfaces as isError so guardedToolCall can run auth remediation', async () => {
       const mockListCustomerProfiles = mock.fn(async () => {
         throw new Error('API Error')
       })
@@ -164,7 +164,8 @@ describe('Chrome Management API', () => {
         .arguments[2]
 
       const result = await handler({ customerId: 'C0123' }, {})
-      assert.deepStrictEqual(result.content[0].text, 'Error listing customer profiles: API Error')
+      assert.strictEqual(result.isError, true)
+      assert.match(result.content[0].text, /API Error/)
     })
   })
 })
