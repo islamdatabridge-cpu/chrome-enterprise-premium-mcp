@@ -160,12 +160,90 @@ async function probeADC(requiredScopes) {
 }
 
 /**
+ * Builds a fresh per-request session-state object. Each HTTP request must call
+ * this so that resolved customerId / orgUnit data from one Workspace tenant
+ * cannot bleed into a concurrent request from another.
+ * @returns {{customerId: null, cachedRootOrgUnitId: null, pendingRule: null, history: Array}} A new session-state object with all fields zeroed.
+ */
+export function createSessionState() {
+  return { customerId: null, cachedRootOrgUnitId: null, pendingRule: null, history: [] }
+}
+
+/**
+ * Builds the Express handler for POST /mcp. Each invocation constructs a fresh
+ * per-request sessionState via createSessionState() and passes it to getServer,
+ * so concurrent requests cannot share customerId/orgUnit cache.
+ * @param {object} gcpInfo - GCP environment metadata.
+ * @param {(gcpInfo: object, sessionState: object) => Promise<object>} [getServerImpl] - Override for tests.
+ * @returns {(req: import('express').Request, res: import('express').Response) => Promise<void>} The Express request handler.
+ */
+export function createMcpPostHandler(gcpInfo, getServerImpl = getServer) {
+  return async (req, res) => {
+    const sessionState = createSessionState()
+    const server = await getServerImpl(gcpInfo, sessionState)
+    try {
+      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+      await server.connect(transport)
+      await transport.handleRequest(req, res, req.body)
+      res.on('close', () => {
+        logger.info(`${TAGS.MCP} Request closed`)
+        transport.close()
+        server.close()
+      })
+    } catch (error) {
+      logger.error(`${TAGS.MCP} Error handling MCP request:`, error)
+      if (!res.headersSent) {
+        const status = error.status || 500
+        res.status(status).json({
+          jsonrpc: '2.0',
+          error: {
+            code: status === 401 ? -32001 : -32603,
+            message: error.message || 'Internal server error',
+          },
+          id: null,
+        })
+      }
+    }
+  }
+}
+
+/**
+ * Builds the Express handler for GET /sse. Each new SSE connection constructs
+ * a fresh per-session sessionState; subsequent /messages POSTs route through
+ * the registered transport, which holds a reference to that same server.
+ * @param {object} gcpInfo - GCP environment metadata.
+ * @param {Record<string, SSEServerTransport>} sseTransports - Map of sessionId -> transport.
+ * @param {(gcpInfo: object, sessionState: object) => Promise<object>} [getServerImpl] - Override for tests.
+ * @returns {(req: import('express').Request, res: import('express').Response) => Promise<void>} The Express request handler.
+ */
+export function createSseHandler(gcpInfo, sseTransports, getServerImpl = getServer) {
+  return async (_req, res) => {
+    logger.info(`${TAGS.MCP} /sse Received request`)
+    try {
+      const sessionState = createSessionState()
+      const server = await getServerImpl(gcpInfo, sessionState)
+      const transport = new SSEServerTransport('/messages', res)
+      sseTransports[transport.sessionId] = transport
+      res.on('close', () => {
+        delete sseTransports[transport.sessionId]
+      })
+      await server.connect(transport)
+    } catch (error) {
+      logger.error(`${TAGS.MCP} Error handling SSE request:`, error)
+      if (!res.headersSent) {
+        res.status(500).send(error.message || 'Internal server error')
+      }
+    }
+  }
+}
+
+/**
  * Initializes and configures the MCP server instance.
  * @param {object} gcpInfo - The detected GCP environment metadata
  * @param {object} sharedSessionState - The shared session state for cross-request persistence
  * @returns {Promise<McpServer>} The configured MCP server instance
  */
-async function getServer(gcpInfo, sharedSessionState) {
+export async function getServer(gcpInfo, sharedSessionState) {
   const server = new McpServer(
     {
       name: 'chrome-enterprise-premium',
@@ -305,33 +383,7 @@ async function main() {
       const app = express()
       app.use(express.json())
 
-      app.post('/mcp', async (req, res) => {
-        const sessionState = { customerId: null, cachedRootOrgUnitId: null, pendingRule: null, history: [] }
-        const server = await getServer(gcpInfo, sessionState)
-        try {
-          const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-          await server.connect(transport)
-          await transport.handleRequest(req, res, req.body)
-          res.on('close', () => {
-            logger.info(`${TAGS.MCP} Request closed`)
-            transport.close()
-            server.close()
-          })
-        } catch (error) {
-          logger.error(`${TAGS.MCP} Error handling MCP request:`, error)
-          if (!res.headersSent) {
-            const status = error.status || 500
-            res.status(status).json({
-              jsonrpc: '2.0',
-              error: {
-                code: status === 401 ? -32001 : -32603,
-                message: error.message || 'Internal server error',
-              },
-              id: null,
-            })
-          }
-        }
-      })
+      app.post('/mcp', createMcpPostHandler(gcpInfo))
 
       app.get('/mcp', async (_req, res) => {
         logger.info(`${TAGS.MCP} Received GET MCP request`)
@@ -346,24 +398,7 @@ async function main() {
 
       const sseTransports = {}
 
-      app.get('/sse', async (_req, res) => {
-        logger.info(`${TAGS.MCP} /sse Received request`)
-        try {
-          const sessionState = { customerId: null, cachedRootOrgUnitId: null, pendingRule: null, history: [] }
-          const server = await getServer(gcpInfo, sessionState)
-          const transport = new SSEServerTransport('/messages', res)
-          sseTransports[transport.sessionId] = transport
-          res.on('close', () => {
-            delete sseTransports[transport.sessionId]
-          })
-          await server.connect(transport)
-        } catch (error) {
-          logger.error(`${TAGS.MCP} Error handling SSE request:`, error)
-          if (!res.headersSent) {
-            res.status(500).send(error.message || 'Internal server error')
-          }
-        }
-      })
+      app.get('/sse', createSseHandler(gcpInfo, sseTransports))
 
       app.post('/messages', async (req, res) => {
         logger.info(`${TAGS.MCP} /messages Received request`)
@@ -410,4 +445,8 @@ const shutdown = async () => {
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
 
-main()
+// Only auto-start when invoked directly; tests import this module to exercise
+// the handler factories without running the server.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main()
+}
