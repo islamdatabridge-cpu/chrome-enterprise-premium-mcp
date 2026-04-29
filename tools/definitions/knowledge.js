@@ -53,18 +53,18 @@ function cleanHtml(html) {
 
   let content = bodyMatch ? bodyMatch[1] : html
 
-  // Strip scripts, styles, and other non-content blocks. The closing-tag
-  // patterns allow optional whitespace inside the tag (e.g. `</script >`)
-  // so they aren't bypassed by valid-but-uncommon HTML. Then a second pass
-  // removes any orphan opening tag whose closer is missing or malformed,
-  // so the substrings `<script` and `<style` can't survive in the output.
+  // Strip scripts, styles, and other non-content blocks. Closing tags use
+  // [^>]* rather than \s* so browser-tolerated junk inside the closer
+  // (e.g. `</script\t\nfoo>`) doesn't bypass the strip. A second pass
+  // removes any orphan `<script`/`<style` opener whose closer is missing
+  // entirely, so neither substring can survive in the LLM-bound output.
   content = content
-    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<style\b[\s\S]*?<\/style\s*>/gi, '')
-    .replace(/<nav\b[\s\S]*?<\/nav\s*>/gi, '')
-    .replace(/<header\b[\s\S]*?<\/header\s*>/gi, '')
-    .replace(/<footer\b[\s\S]*?<\/footer\s*>/gi, '')
-    .replace(/<devsite-toc\b[^>]*>[\s\S]*?<\/devsite-toc\s*>/gi, '')
+    .replace(/<script\b[\s\S]*?<\/script[^>]*>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style[^>]*>/gi, '')
+    .replace(/<nav\b[\s\S]*?<\/nav[^>]*>/gi, '')
+    .replace(/<header\b[\s\S]*?<\/header[^>]*>/gi, '')
+    .replace(/<footer\b[\s\S]*?<\/footer[^>]*>/gi, '')
+    .replace(/<devsite-toc\b[^>]*>[\s\S]*?<\/devsite-toc[^>]*>/gi, '')
     .replace(/<\/?(?:script|style)\b[^>]*>?/gi, '')
 
   // Aggressively strip boilerplate and support site headers
