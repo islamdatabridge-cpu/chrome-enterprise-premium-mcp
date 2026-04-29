@@ -178,7 +178,7 @@ function getInitialState() {
           ],
           'chrome.users.RealtimeUrlCheck': [
             {
-              policyValue: {
+              value: {
                 policySchema: 'chrome.users.RealtimeUrlCheck',
                 value: {
                   realtimeUrlCheckEnabled: 'ENTERPRISE_REAL_TIME_URL_CHECK_MODE_ENUM_ENABLED',
