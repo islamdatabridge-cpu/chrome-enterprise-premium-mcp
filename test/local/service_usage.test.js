@@ -274,4 +274,62 @@ describe('check_and_enable_cep_api tool', () => {
       ),
     )
   })
+
+  test('When enableService returns done:true, then the API is marked ENABLED (synchronous LRO)', async () => {
+    const mockServiceUsageClient = {
+      getServiceStatus: mock.fn(async (projectId, api) => ({
+        name: `projects/${projectId}/services/${api}`,
+        state: 'DISABLED',
+      })),
+      enableService: mock.fn(async () => ({ done: true, response: { state: 'ENABLED' } })),
+    }
+
+    const handler = await setupTool(mockServiceUsageClient)
+
+    const result = await handler(
+      {
+        projectId: 'test-project',
+        apiName: SERVICE_NAMES.ADMIN_SDK,
+        enable: true,
+        checkAll: false,
+      },
+      { requestInfo: {} },
+    )
+
+    assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — NEWLY_ENABLED`))
+    const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
+    assert.strictEqual(status.status, 'ENABLED')
+  })
+
+  test('When enableService returns done:false, then the API is marked ENABLING with a pending message', async () => {
+    const mockServiceUsageClient = {
+      getServiceStatus: mock.fn(async (projectId, api) => ({
+        name: `projects/${projectId}/services/${api}`,
+        state: 'DISABLED',
+      })),
+      enableService: mock.fn(async () => ({
+        done: false,
+        name: 'operations/test-operation-123',
+      })),
+    }
+
+    const handler = await setupTool(mockServiceUsageClient)
+
+    const result = await handler(
+      {
+        projectId: 'test-project',
+        apiName: SERVICE_NAMES.ADMIN_SDK,
+        enable: true,
+        checkAll: false,
+      },
+      { requestInfo: {} },
+    )
+
+    assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — ENABLING`))
+    assert.ok(result.content[0].text.includes('enable requested, may take a few minutes'))
+    assert.ok(result.content[0].text.includes('operations/test-operation-123'))
+    const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
+    assert.strictEqual(status.status, 'ENABLING')
+    assert.strictEqual(status.operationName, 'operations/test-operation-123')
+  })
 })

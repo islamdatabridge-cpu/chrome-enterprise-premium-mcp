@@ -87,9 +87,17 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
                 apiStatuses.push({ apiName: api, status: 'ENABLED', projectId })
               } else if (enable) {
                 logger.info(`${TAGS.MCP} Enabling API [${api}] for project [${projectId}]...`)
-                await serviceUsageClient.enableService(projectId, api, authToken)
-                results.push(`- **${api}** — NEWLY_ENABLED (project: \`${projectId}\`)`)
-                apiStatuses.push({ apiName: api, status: 'ENABLED', projectId })
+                const enableResponse = await serviceUsageClient.enableService(projectId, api, authToken)
+                if (enableResponse && enableResponse.done === true) {
+                  results.push(`- **${api}** — NEWLY_ENABLED (project: \`${projectId}\`)`)
+                  apiStatuses.push({ apiName: api, status: 'ENABLED', projectId })
+                } else {
+                  const operationName = enableResponse && enableResponse.name ? enableResponse.name : 'unknown'
+                  results.push(
+                    `- **${api}** — ENABLING (project: \`${projectId}\`): enable requested, may take a few minutes (operation: \`${operationName}\`)`,
+                  )
+                  apiStatuses.push({ apiName: api, status: 'ENABLING', projectId, operationName })
+                }
               } else {
                 const consoleLink = `https://console.cloud.google.com/apis/library/${api}?project=${projectId}`
                 results.push(`- **${api}** — DISABLED (project: \`${projectId}\`)`)
