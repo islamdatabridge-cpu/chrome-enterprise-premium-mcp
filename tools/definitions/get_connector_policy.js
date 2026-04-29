@@ -40,7 +40,7 @@ export function registerGetConnectorPolicyTool(server, options, sessionState) {
     {
       description: `Retrieves the current configuration for a specific Chrome Enterprise connector.
 Use this to AUDIT or VERIFY settings for features like "printing sensitive data", "real-time URL checks", or "event reporting".
-To enable or modify a connector that is not yet configured, use the "enable_chrome_enterprise_connectors" tool.`,
+Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connectors that are currently unconfigured. There is currently no tool to MODIFY an already configured connector; these must be updated manually in the Admin Console.`,
       inputSchema: {
         customerId: z.string().optional().describe('The Chrome customer ID (e.g. C012345).'),
         orgUnitId: z.string().describe('The ID of the organizational unit to check.'),
