@@ -84,4 +84,31 @@ describe('Customer ID Caching and Auto-Resolution', () => {
     assert.strictEqual(mockListOrgUnits.mock.calls[0].arguments[0].customerId, 'C_EXPLICIT')
     assert.strictEqual(sessionState.customerId, 'C_EXPLICIT')
   })
+
+  test('When getCustomerId throws during auto-resolve, then the tool returns isError true without running with undefined customerId', async () => {
+    const authError = new Error('UNAUTHENTICATED: credentials are invalid')
+    authError.status = 401
+    const mockGetCustomerId = mock.fn(async () => {
+      throw authError
+    })
+    const mockHandler = mock.fn(async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const adminSdkClientInstance = { getCustomerId: mockGetCustomerId }
+
+    const sessionState = { customerId: null }
+    const tool = guardedToolCall(
+      { handler: mockHandler },
+      { apiClients: { adminSdk: adminSdkClientInstance } },
+      sessionState,
+    )
+
+    const result = await tool({}, {})
+
+    assert.strictEqual(result.isError, true, 'Tool should return isError: true when auto-resolve fails')
+    assert.strictEqual(
+      mockHandler.mock.callCount(),
+      0,
+      'Underlying handler should not be called when auto-resolve fails',
+    )
+    assert.ok(result.content[0].text.length > 0, 'Error response should contain a message')
+  })
 })

@@ -213,6 +213,7 @@ export function guardedToolCall(
             }
           } catch (error) {
             logger.error(`${TAGS.MCP} Failed to auto-resolve customerId:`, error)
+            throw error
           }
         }
       }
