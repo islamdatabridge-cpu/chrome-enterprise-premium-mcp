@@ -107,10 +107,8 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
                 errorMessage.includes('PERMISSION_DENIED') ||
                 errorMessage.includes('invalid_grant')
 
-              // Match Google's canonical wording rather than substring-matching
-              // the host (which CodeQL flags as incomplete URL sanitization and
-              // which would also match attacker-controlled lookalike subdomains).
-              const mentionsServiceUsage = errorMessage.includes('Service Usage API')
+              const mentionsServiceUsage =
+                errorMessage.includes('Service Usage API') || /\bserviceusage\.googleapis\.com\b/.test(errorMessage)
 
               if (isAuthError && !mentionsServiceUsage) {
                 throw error
