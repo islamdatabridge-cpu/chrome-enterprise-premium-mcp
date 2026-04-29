@@ -399,10 +399,13 @@ async function main() {
   }
 }
 
-process.on('SIGINT', async () => {
+const shutdown = async () => {
   logger.error(`${TAGS.MCP} Shutting down server...`)
   // eslint-disable-next-line n/no-process-exit
   process.exit(0)
-})
+}
+
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)
 
 main()
