@@ -6,6 +6,12 @@
     "type": "git",
     "url": "git+https://github.com/google/chrome-enterprise-premium-mcp.git"
   },
+  "files": [
+    "mcp-server.js",
+    "tools/",
+    "lib/",
+    "prompts/"
+  ],
   "license": "Apache-2.0",
   "type": "module",
   "main": "mcp-server.js",

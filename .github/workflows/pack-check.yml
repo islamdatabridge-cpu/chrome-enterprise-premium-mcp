@@ -1,0 +1,22 @@
+name: Tarball contents
+on:
+  pull_request:
+    paths: ['package.json', '.github/expected-tarball.txt']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pack-check:
+    name: Verify npm pack contents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - name: Snapshot tarball file list
+        run: |
+          npm pack --dry-run --json | jq -r '.[0].files[].path' | sort > /tmp/actual-tarball.txt
+          diff -u .github/expected-tarball.txt /tmp/actual-tarball.txt

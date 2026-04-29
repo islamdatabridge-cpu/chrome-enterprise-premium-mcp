@@ -1,0 +1,2 @@
+# Test-only helpers that are not part of the production surface.
+lib/util/fake-auth-provider.js
