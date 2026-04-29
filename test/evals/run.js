@@ -355,12 +355,15 @@ async function main() {
     writeResults(results, args.output)
 
     // Automatically generate AI failure summary for CI runs
-    if (args.priority && args.priority.includes('P0') && hasFailures) {
+    if (Array.isArray(args.priority) && args.priority.some(p => p === 'P0') && hasFailures) {
       console.log(`\nP0 tests failed. Generating AI summary for CI...`)
       try {
         const { GoogleGenerativeAI } = await import('@google/generative-ai')
         const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' }, baseUrl ? { baseUrl } : {})
+        const model = genAI.getGenerativeModel(
+          { model: 'gemini-3.1-flash-lite-preview' },
+          baseUrl ? { baseUrl } : undefined,
+        )
 
         const failedResults = results.filter(r => !r.passed)
         const failureDetails = failedResults
