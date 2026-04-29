@@ -188,27 +188,20 @@ async function getServer(gcpInfo, sharedSessionState) {
   })
 
   const apiOptions = {}
-  let apiClients = {}
 
   if (process.env.GOOGLE_API_ROOT_URL) {
     apiOptions.rootUrl = process.env.GOOGLE_API_ROOT_URL
     logger.info(`${TAGS.MCP} TEST MODE: Real API clients redirected to ${apiOptions.rootUrl}`)
-    apiClients = {
-      adminSdk: new RealAdminSdkClient(apiOptions),
-      cloudIdentity: new RealCloudIdentityClient(apiOptions),
-      chromePolicy: new RealChromePolicyClient(apiOptions),
-      chromeManagement: new RealChromeManagementClient(apiOptions),
-      serviceUsage: new RealServiceUsageClient(apiOptions),
-    }
   } else {
     logger.info(`${TAGS.MCP} Using REAL API clients.`)
-    apiClients = {
-      adminSdk: new RealAdminSdkClient(apiOptions),
-      cloudIdentity: new RealCloudIdentityClient(apiOptions),
-      chromePolicy: new RealChromePolicyClient(apiOptions),
-      chromeManagement: new RealChromeManagementClient(apiOptions),
-      serviceUsage: new RealServiceUsageClient(apiOptions),
-    }
+  }
+
+  const apiClients = {
+    adminSdk: new RealAdminSdkClient(apiOptions),
+    cloudIdentity: new RealCloudIdentityClient(apiOptions),
+    chromePolicy: new RealChromePolicyClient(apiOptions),
+    chromeManagement: new RealChromeManagementClient(apiOptions),
+    serviceUsage: new RealServiceUsageClient(apiOptions),
   }
 
   const toolOptions = {
