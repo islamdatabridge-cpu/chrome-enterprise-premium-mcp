@@ -41,6 +41,11 @@ limitations under the License.
 import { config } from '@dotenvx/dotenvx'
 config({ quiet: true, ignore: ['MISSING_ENV_FILE'] })
 
+// Ensure the delete-tool experiment is on by default so evals that test the
+// agent's judgment (e.g. m03) exercise real production-with-experiment behavior.
+// The caller can still override by setting EXPERIMENT_DELETE_TOOL_ENABLED=false.
+process.env.EXPERIMENT_DELETE_TOOL_ENABLED ??= 'true'
+
 import { parseArgs } from 'node:util'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
