@@ -437,10 +437,10 @@ export function createFakeApp() {
         continue
       }
       if (!state.connectorPolicies[customerId]) {
-        state.connectorPolicies[customerId] = {}
+        state.connectorPolicies[customerId] = Object.create(null)
       }
       if (!state.connectorPolicies[customerId][orgUnitId]) {
-        state.connectorPolicies[customerId][orgUnitId] = {}
+        state.connectorPolicies[customerId][orgUnitId] = Object.create(null)
       }
       state.connectorPolicies[customerId][orgUnitId][schema] = [
         {
@@ -661,7 +661,7 @@ export function createFakeApp() {
         state.licenses[customerId] = {}
       }
       if (!state.licenses[customerId][data.productId]) {
-        state.licenses[customerId][data.productId] = {}
+        state.licenses[customerId][data.productId] = Object.create(null)
       }
       if (!state.licenses[customerId][data.productId][data.skuId]) {
         state.licenses[customerId][data.productId][data.skuId] = []
@@ -675,7 +675,7 @@ export function createFakeApp() {
           return
         }
         if (!state.licenses[customerId][item.productId]) {
-          state.licenses[customerId][item.productId] = {}
+          state.licenses[customerId][item.productId] = Object.create(null)
         }
         if (!state.licenses[customerId][item.productId][item.skuId]) {
           state.licenses[customerId][item.productId][item.skuId] = []
