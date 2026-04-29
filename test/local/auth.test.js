@@ -101,7 +101,12 @@ describe('Auth', () => {
           stdout = 'Google Cloud SDK'
         } else if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
           stdout = '(unset)\n'
-        } else if (cmd === 'gcloud' && args.includes('projects') && args.includes('list') && args.includes('--limit=10')) {
+        } else if (
+          cmd === 'gcloud' &&
+          args.includes('projects') &&
+          args.includes('list') &&
+          args.includes('--limit=10')
+        ) {
           stdout = 'proj-1\nproj-2\nproj-3\n'
         } else if (cmd === 'gcloud' && args.includes('services') && args.includes('list')) {
           const projectIndex = args.indexOf('--project') + 1
@@ -133,7 +138,12 @@ describe('Auth', () => {
           stdout = 'Google Cloud SDK'
         } else if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
           stdout = '(unset)\n'
-        } else if (cmd === 'gcloud' && args.includes('projects') && args.includes('list') && args.includes('--limit=10')) {
+        } else if (
+          cmd === 'gcloud' &&
+          args.includes('projects') &&
+          args.includes('list') &&
+          args.includes('--limit=10')
+        ) {
           stdout = 'proj-1\nproj-2\n'
         }
         cb(null, stdout, '')
