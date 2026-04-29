@@ -40,6 +40,19 @@ function isSafeKey(key) {
   return key !== undefined && !PROTO_POLLUTING_KEYS.has(String(key))
 }
 
+/**
+ * Build a null-prototype map containing the given entries. We use this for
+ * every state container that the route handlers index with user-controlled
+ * keys (customerId, orgUnitId, productId, schemaName, serviceName, …) so
+ * `state.customers['__proto__']` and friends return undefined instead of
+ * walking up to Object.prototype.
+ * @param {object} entries Initial enumerable own properties to copy in.
+ * @returns {object} A null-prototype map populated with `entries`.
+ */
+function nullProtoMap(entries) {
+  return Object.assign(Object.create(null), entries)
+}
+
 /** Initial state factory */
 
 /**
@@ -48,11 +61,11 @@ function isSafeKey(key) {
 function getInitialState() {
   return {
     defaultCustomerId: 'C0123456',
-    customers: {
+    customers: nullProtoMap({
       C0123456: { id: 'C0123456', customerDomain: 'example.com' },
-    },
-    orgUnits: {
-      C0123456: {
+    }),
+    orgUnits: nullProtoMap({
+      C0123456: nullProtoMap({
         fakeOUId1: {
           name: 'Root OU',
           orgUnitId: 'id:fakeOUId1',
@@ -65,9 +78,9 @@ function getInitialState() {
           orgUnitPath: '/Child OU',
           parentOrgUnitId: 'id:fakeOUId1',
         },
-      },
-    },
-    policies: {
+      }),
+    }),
+    policies: nullProtoMap({
       'policies/fakeDlpRule1': {
         name: 'policies/fakeDlpRule1',
         customer: 'customers/C0123456',
@@ -123,12 +136,12 @@ function getInitialState() {
           },
         },
       },
-    },
+    }),
     // Connector policies keyed by customerId -> orgUnitId -> schema name
     // Returned by policies:resolve
-    connectorPolicies: {
-      C0123456: {
-        fakeOUId1: {
+    connectorPolicies: nullProtoMap({
+      C0123456: nullProtoMap({
+        fakeOUId1: nullProtoMap({
           'chrome.users.OnFileAttachedConnectorPolicy': [
             {
               value: {
@@ -202,9 +215,9 @@ function getInitialState() {
             },
           ],
           'chrome.users.OnSecurityEvent': [],
-        },
-      },
-    },
+        }),
+      }),
+    }),
     // Global/Unassigned policies (backwards compat or generic)
     globalConnectorPolicies: {
       'chrome.users.apps.InstallType': [
@@ -225,21 +238,21 @@ function getInitialState() {
       { version: '121.0.6167.85', count: '3', channel: 'BETA' },
     ],
     profiles: [],
-    licenses: {
-      C0123456: {
-        101040: {
+    licenses: nullProtoMap({
+      C0123456: nullProtoMap({
+        101040: nullProtoMap({
           1010400001: [{ userId: 'user1@example.com', skuId: '1010400001', productId: '101040' }],
-        },
-      },
-    },
-    serviceUsage: {
+        }),
+      }),
+    }),
+    serviceUsage: nullProtoMap({
       'admin.googleapis.com': 'ENABLED',
       'chromemanagement.googleapis.com': 'ENABLED',
       'chromepolicy.googleapis.com': 'ENABLED',
       'cloudidentity.googleapis.com': 'ENABLED',
       'licensing.googleapis.com': 'ENABLED',
       'serviceusage.googleapis.com': 'ENABLED',
-    },
+    }),
   }
 }
 
@@ -645,7 +658,7 @@ export function createFakeApp() {
     } else if (data.kind === 'admin#directory#orgUnits') {
       const customerId = state.defaultCustomerId
       if (!state.orgUnits[customerId]) {
-        state.orgUnits[customerId] = {}
+        state.orgUnits[customerId] = Object.create(null)
       }
       data.organizationUnits.forEach(ou => {
         state.orgUnits[customerId][ou.orgUnitId.replace('id:', '')] = ou
@@ -658,7 +671,7 @@ export function createFakeApp() {
         return
       }
       if (!state.licenses[customerId]) {
-        state.licenses[customerId] = {}
+        state.licenses[customerId] = Object.create(null)
       }
       if (!state.licenses[customerId][data.productId]) {
         state.licenses[customerId][data.productId] = Object.create(null)
@@ -669,7 +682,7 @@ export function createFakeApp() {
       state.licenses[customerId][data.productId][data.skuId].push(data)
     } else if (data.kind === 'licensing#licenseAssignmentList') {
       const customerId = state.defaultCustomerId
-      state.licenses[customerId] = {} // Clear existing
+      state.licenses[customerId] = Object.create(null) // Clear existing
       data.items.forEach(item => {
         if (!isSafeKey(item.productId) || !isSafeKey(item.skuId)) {
           return
@@ -683,7 +696,7 @@ export function createFakeApp() {
         state.licenses[customerId][item.productId][item.skuId].push(item)
       })
     } else if (data.kind === 'cloudidentity#policies') {
-      state.policies = {} // Clear existing
+      state.policies = Object.create(null) // Clear existing
       data.policies.forEach(policy => {
         state.policies[policy.name] = policy
       })
