@@ -111,6 +111,7 @@ export function registerDeleteAgentDlpRuleTool(server, options, sessionState) {
             },
           })
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,

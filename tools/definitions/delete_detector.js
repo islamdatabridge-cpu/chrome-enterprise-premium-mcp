@@ -90,6 +90,7 @@ Note: This will not automatically remove the detector from any DLP rules that re
             },
           })
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,

@@ -103,6 +103,7 @@ export function registerGetDlpRuleTool(server, options, sessionState) {
             },
           })
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,

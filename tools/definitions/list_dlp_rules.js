@@ -117,6 +117,7 @@ export function registerListDlpRulesTool(server, options, sessionState) {
             },
           })
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,
