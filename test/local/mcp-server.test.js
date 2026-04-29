@@ -95,10 +95,22 @@ describe('MCP Server in stdio mode', () => {
   })
 
   describe('MCP Server Startup Logs', () => {
+    // A dummy API root causes probeADC() to short-circuit immediately (it
+    // checks process.env.GOOGLE_API_ROOT_URL and returns early), which
+    // removes the 8-second network-probe window that was racing against the
+    // 12-second spawnSync timeout and causing intermittent failures (#47).
+    const NO_ADC_PROBE = 'http://localhost:1'
+
     test('When server starts with custom PORT, then it logs the correct port', () => {
       const serverPath = path.resolve(__dirname, '../../mcp-server.js')
       const result = spawnSync(process.execPath, [serverPath], {
-        env: { ...process.env, PORT: '4000', GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info' },
+        env: {
+          ...process.env,
+          PORT: '4000',
+          GCP_STDIO: 'false',
+          CEP_LOG_LEVEL: 'info',
+          GOOGLE_API_ROOT_URL: NO_ADC_PROBE,
+        },
         timeout: 12000,
       })
 
@@ -110,7 +122,7 @@ describe('MCP Server in stdio mode', () => {
     test('When server starts without PORT, then it assigns a random port', () => {
       const serverPath = path.resolve(__dirname, '../../mcp-server.js')
       const result = spawnSync(process.execPath, [serverPath], {
-        env: { ...process.env, GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info' },
+        env: { ...process.env, GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info', GOOGLE_API_ROOT_URL: NO_ADC_PROBE },
         timeout: 12000,
       })
 
@@ -128,14 +140,23 @@ describe('MCP Server in stdio mode', () => {
       })
       const port = server.address().port
 
-      const result = spawnSync(process.execPath, [serverPath], {
-        env: { ...process.env, PORT: port.toString(), GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info' },
-        timeout: 12000,
-      })
+      let result
+      try {
+        result = spawnSync(process.execPath, [serverPath], {
+          env: {
+            ...process.env,
+            PORT: port.toString(),
+            GCP_STDIO: 'false',
+            CEP_LOG_LEVEL: 'info',
+            GOOGLE_API_ROOT_URL: NO_ADC_PROBE,
+          },
+          timeout: 12000,
+        })
+      } finally {
+        server.close()
+      }
 
       const output = result.stderr.toString() + result.stdout.toString()
-      server.close()
-
       assert.match(output, /Fatal error: Port \d+ is already in use/)
     })
 
