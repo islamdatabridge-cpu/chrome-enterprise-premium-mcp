@@ -71,6 +71,7 @@ Use this to verify if an individual user (by email or unique ID) is licensed for
             })
           }
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,

@@ -161,6 +161,7 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
             structuredContent: { apiStatuses },
           })
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,
