@@ -306,7 +306,8 @@ async function main() {
       app.use(express.json())
 
       app.post('/mcp', async (req, res) => {
-        const server = await getServer(gcpInfo, sharedSessionState)
+        const sessionState = { customerId: null, cachedRootOrgUnitId: null, pendingRule: null, history: [] }
+        const server = await getServer(gcpInfo, sessionState)
         try {
           const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
           await server.connect(transport)
@@ -348,7 +349,8 @@ async function main() {
       app.get('/sse', async (_req, res) => {
         logger.info(`${TAGS.MCP} /sse Received request`)
         try {
-          const server = await getServer(gcpInfo, sharedSessionState)
+          const sessionState = { customerId: null, cachedRootOrgUnitId: null, pendingRule: null, history: [] }
+          const server = await getServer(gcpInfo, sessionState)
           const transport = new SSEServerTransport('/messages', res)
           sseTransports[transport.sessionId] = transport
           res.on('close', () => {
