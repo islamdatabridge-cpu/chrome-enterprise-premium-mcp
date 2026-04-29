@@ -15,8 +15,11 @@
   "scripts": {
     "eval": "CEP_BACKEND=fake node test/evals/run.js",
     "eval:agentic": "CEP_BACKEND=fake node test/evals/run.js --category inspection,troubleshooting,mutation,discovery,connectors",
+    "eval:boundary": "CEP_BACKEND=fake node test/evals/run.js --category boundary",
     "eval:full": "CEP_BACKEND=fake node test/evals/run.js --runs 3 --output results/eval-full.md",
     "eval:knowledge": "CEP_BACKEND=fake node test/evals/run.js --category knowledge",
+    "eval:licensing": "CEP_BACKEND=fake node test/evals/run.js --category licensing",
+    "eval:prompt": "CEP_BACKEND=fake node test/evals/run.js --category prompt",
     "format": "prettier --write .",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
