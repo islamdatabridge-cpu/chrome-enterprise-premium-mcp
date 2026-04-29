@@ -327,6 +327,8 @@ file for details on how to contribute to this project.
 
 ## Legal
 
+This repository is provided as a reference implementation that customers can explore and adapt under the Apache 2.0 license. It is not an officially supported Google product.
+
 - **License:** [Apache License 2.0](LICENSE)
 - **Terms of Service:** [Terms of Service](https://policies.google.com/terms)
 - **Privacy Policy:** [Privacy Policy](https://policies.google.com/privacy)
