@@ -54,17 +54,7 @@ function getAuthRemediationMessage(status, isOAuth = false) {
 2. **Verify APIs are enabled:** Ensure \`admin.googleapis.com\`, \`chromemanagement.googleapis.com\`, \`chromepolicy.googleapis.com\`, and \`cloudidentity.googleapis.com\` are enabled in your Google Cloud project.`
   }
 
-  const scopesList = [
-    SCOPES.CHROME_MANAGEMENT_POLICY,
-    SCOPES.CHROME_MANAGEMENT_REPORTS_READONLY,
-    SCOPES.CHROME_MANAGEMENT_PROFILES_READONLY,
-    SCOPES.ADMIN_REPORTS_AUDIT_READONLY,
-    SCOPES.ADMIN_DIRECTORY_ORGUNIT_READONLY,
-    SCOPES.ADMIN_DIRECTORY_CUSTOMER_READONLY,
-    SCOPES.LICENSING,
-    SCOPES.CLOUD_IDENTITY_POLICIES,
-    SCOPES.CLOUD_PLATFORM,
-  ]
+  const scopesList = Object.values(SCOPES)
 
   const bashScopes = scopesList.map(s => `  "${s}"`).join('\n')
   const bashCommand = `SCOPES=(\n${bashScopes}\n)\ngcloud auth application-default login --scopes=$(IFS=,; echo "\${SCOPES[*]}")`
