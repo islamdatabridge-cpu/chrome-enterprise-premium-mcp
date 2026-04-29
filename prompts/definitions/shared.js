@@ -24,8 +24,20 @@ limitations under the License.
  */
 export const SHARED_DIAGNOSTIC_RULES = `3. Summarize your findings using the following structural rules:
 
+**Top Finding (Lead With the Headline)**
+Begin your response with a single bold sentence — preceded by **Top finding:** — that states the most consequential thing the administrator needs to know. Pick the upstream dependency, not a leaf observation. Examples of what counts as a top finding:
+*   The Content Analysis Connectors are missing, so the DLP rules cannot scan any content (rules are present but inert).
+*   Active DLP rules reference detectors that no longer exist, so those rules silently produce no matches.
+*   The CEP subscription is inactive or has zero licenses assigned, so no CEP feature can apply.
+*   The Secure Enterprise Browser extension is missing, so data-masking and other browser-side enforcement features cannot run even when DLP rules are configured.
+*   The environment is healthy: subscription active, connectors enabled, DLP rules in place, and SEB deployed (only when nothing is wrong).
+
+When upstream gaps make downstream controls non-functional, name that explicitly: do not list each gap as if it were independent.
+
+After the top finding, add a short paragraph (one or two sentences) connecting the headline to its downstream effect — what the administrator loses or can't rely on while the upstream gap exists.
+
 **Visual Status Mapping (The Summary Table)**
-Begin your response with a Markdown table that provides a clear status for every metric.
+Below the headline, render a Markdown table that provides a clear status for every metric.
 *   Columns: \`Security Control\`, \`Status\`, \`Findings\`
 *   Use emojis for quick scanning: ✅ (Configured/Active), ❌ (Inactive/Missing), ⚠️ (Unknown/Unverified).
 *   Keep the "Findings" text brief and direct.
