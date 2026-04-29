@@ -354,13 +354,20 @@ async function main() {
 
       app.get('/sse', async (_req, res) => {
         logger.info(`${TAGS.MCP} /sse Received request`)
-        const server = await getServer(gcpInfo, sharedSessionState)
-        const transport = new SSEServerTransport('/messages', res)
-        sseTransports[transport.sessionId] = transport
-        res.on('close', () => {
-          delete sseTransports[transport.sessionId]
-        })
-        await server.connect(transport)
+        try {
+          const server = await getServer(gcpInfo, sharedSessionState)
+          const transport = new SSEServerTransport('/messages', res)
+          sseTransports[transport.sessionId] = transport
+          res.on('close', () => {
+            delete sseTransports[transport.sessionId]
+          })
+          await server.connect(transport)
+        } catch (error) {
+          logger.error(`${TAGS.MCP} Error handling SSE request:`, error)
+          if (!res.headersSent) {
+            res.status(500).send(error.message || 'Internal server error')
+          }
+        }
       })
 
       app.post('/messages', async (req, res) => {
