@@ -104,7 +104,13 @@ describe('MCP Server in stdio mode', () => {
     test('When server starts with custom PORT, then it logs the correct port', () => {
       const serverPath = path.resolve(__dirname, '../../mcp-server.js')
       const result = spawnSync(process.execPath, [serverPath], {
-        env: { ...process.env, PORT: '4000', GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info', GOOGLE_API_ROOT_URL: NO_ADC_PROBE },
+        env: {
+          ...process.env,
+          PORT: '4000',
+          GCP_STDIO: 'false',
+          CEP_LOG_LEVEL: 'info',
+          GOOGLE_API_ROOT_URL: NO_ADC_PROBE,
+        },
         timeout: 12000,
       })
 
@@ -137,7 +143,13 @@ describe('MCP Server in stdio mode', () => {
       let result
       try {
         result = spawnSync(process.execPath, [serverPath], {
-          env: { ...process.env, PORT: port.toString(), GCP_STDIO: 'false', CEP_LOG_LEVEL: 'info', GOOGLE_API_ROOT_URL: NO_ADC_PROBE },
+          env: {
+            ...process.env,
+            PORT: port.toString(),
+            GCP_STDIO: 'false',
+            CEP_LOG_LEVEL: 'info',
+            GOOGLE_API_ROOT_URL: NO_ADC_PROBE,
+          },
           timeout: 12000,
         })
       } finally {
