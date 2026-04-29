@@ -53,14 +53,19 @@ function cleanHtml(html) {
 
   let content = bodyMatch ? bodyMatch[1] : html
 
-  // Strip scripts, styles, and other non-content blocks
+  // Strip scripts, styles, and other non-content blocks. The closing-tag
+  // patterns allow optional whitespace inside the tag (e.g. `</script >`)
+  // so they aren't bypassed by valid-but-uncommon HTML. Then a second pass
+  // removes any orphan opening tag whose closer is missing or malformed,
+  // so the substrings `<script` and `<style` can't survive in the output.
   content = content
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<nav[\s\S]*?<\/nav>/gi, '')
-    .replace(/<header[\s\S]*?<\/header>/gi, '')
-    .replace(/<footer[\s\S]*?<\/footer>/gi)
-    .replace(/<devsite-toc[^>]*>([\s\S]*?)<\/devsite-toc>/gi, '')
+    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style\s*>/gi, '')
+    .replace(/<nav\b[\s\S]*?<\/nav\s*>/gi, '')
+    .replace(/<header\b[\s\S]*?<\/header\s*>/gi, '')
+    .replace(/<footer\b[\s\S]*?<\/footer\s*>/gi, '')
+    .replace(/<devsite-toc\b[^>]*>[\s\S]*?<\/devsite-toc\s*>/gi, '')
+    .replace(/<\/?(?:script|style)\b[^>]*>?/gi, '')
 
   // Aggressively strip boilerplate and support site headers
   content = content
@@ -76,13 +81,11 @@ function cleanHtml(html) {
   // Strip all remaining tags but preserve content
   content = content.replace(/<[^>]+>/g, ' ')
 
-  // Normalize whitespace and unescape common entities
+  // Decode common HTML entities in a single pass so a literal "&amp;lt;" stays
+  // as "&lt;" instead of being double-unescaped to "<".
+  const HTML_ENTITIES = { '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"' }
   return content
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
+    .replace(/&(?:nbsp|amp|lt|gt|quot);/g, m => HTML_ENTITIES[m])
     .replace(/\s+/g, ' ')
     .trim()
 }

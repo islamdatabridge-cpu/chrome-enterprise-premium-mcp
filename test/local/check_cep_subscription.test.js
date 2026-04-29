@@ -137,8 +137,11 @@ describe('check_cep_subscription Tool', () => {
     const result = await handler({ customerId: 'C0123' }, {})
 
     assert.strictEqual(mockCheckCepSubscription.mock.callCount(), 1)
-    assert.match(result.content[0].text, /Error: API \[licensing.googleapis.com\] is not enabled/)
-    assert.match(result.content[0].text, /https:\/\/console.cloud.google.com\/apis\/library\/licensing.googleapis.com/)
+    assert.match(result.content[0].text, /Error: API \[licensing\.googleapis\.com\] is not enabled/)
+    assert.match(
+      result.content[0].text,
+      /https:\/\/console\.cloud\.google\.com\/apis\/library\/licensing\.googleapis\.com/,
+    )
   })
 
   test('When access is denied, then it returns error message', async () => {
