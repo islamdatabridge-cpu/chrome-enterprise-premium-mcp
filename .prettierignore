@@ -1,3 +1,4 @@
 test/evals/cases/**/*.md
 results.json
 results_final.json
+.claude/
