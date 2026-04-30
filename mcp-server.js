@@ -32,7 +32,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { SetLevelRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import fs from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { GoogleAuth, OAuth2Client } from 'google-auth-library'
 
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'))
@@ -311,8 +311,9 @@ export async function getServer(gcpInfo, sharedSessionState) {
 
 /**
  * Starts the MCP server.
+ * @returns {Promise<void>} Resolves when the server is shut down.
  */
-async function main() {
+export async function runServer() {
   try {
     const gcpInfo = await checkGCP()
     const isStdio = shouldStartStdio(gcpInfo)
@@ -460,8 +461,8 @@ const shutdown = async () => {
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
 
-// Only auto-start when invoked directly; tests import this module to exercise
-// the handler factories without running the server.
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main()
+// Only auto-start when invoked directly; tests and bin/cli.js import this
+// module without triggering the server.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runServer()
 }
