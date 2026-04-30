@@ -20,6 +20,7 @@ import {
   buildScopesField,
   buildAuthRemediationLines,
   buildQuotaProjectWarning,
+  buildOAuthClientField,
   shellTokenize,
 } from '../../lib/util/auth_messages.js'
 import { SCOPES } from '../../lib/constants.js'
@@ -115,6 +116,159 @@ describe('buildScopesField', () => {
     )
     assert.match(field, /missing/i)
   })
+
+  test('When probe has source adc with all scopes and principal, then it shows ADC label with principal', () => {
+    const probe = {
+      ok: true,
+      source: 'adc',
+      scopesKnown: true,
+      missingScopes: [],
+      principal: 'tim@example.com',
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🟢/)
+    assert.match(field, /ADC/)
+    assert.match(field, /tim@example\.com/)
+    assert.ok(field.includes(`${REQUIRED.length}/${REQUIRED.length}`), `expected "N/N scopes"; got: ${field}`)
+  })
+
+  test('When probe has source oauth-flow with all scopes and principal, then it shows OAuth label with principal', () => {
+    const probe = {
+      ok: true,
+      source: 'oauth-flow',
+      scopesKnown: true,
+      missingScopes: [],
+      principal: 'tim@example.com',
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🟢/)
+    assert.match(field, /OAuth/)
+    assert.match(field, /tim@example\.com/)
+    assert.ok(field.includes(`${REQUIRED.length}/${REQUIRED.length}`), `expected "N/N scopes"; got: ${field}`)
+  })
+
+  test('When probe has source bearer-access without scope info, then it shows Bearer label without scope count', () => {
+    const probe = {
+      ok: true,
+      source: 'bearer-access',
+      scopesKnown: false,
+      missingScopes: [],
+      principal: undefined,
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🟢/)
+    assert.match(field, /Bearer/)
+    assert.match(field, /\(access\)/)
+    assert.doesNotMatch(field, /\d+\/\d+/, 'must not show scope count when scopesKnown is false')
+  })
+
+  test('When probe has source adc and ok is false, then it shows ADC not configured', () => {
+    const probe = {
+      ok: false,
+      source: 'adc',
+      scopesKnown: false,
+      missingScopes: [],
+      principal: undefined,
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🔴/)
+    assert.match(field, /ADC/)
+    assert.match(field, /not configured/i)
+  })
+
+  test('When probe has source oauth-flow and ok is false, then it shows OAuth tokens missing', () => {
+    const probe = {
+      ok: false,
+      source: 'oauth-flow',
+      scopesKnown: false,
+      missingScopes: [],
+      principal: undefined,
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🔴/)
+    assert.match(field, /OAuth/)
+    assert.match(field, /tokens.*missing/i)
+  })
+
+  test('When probe has source bearer-id and ok is false, then it shows ID token rejected', () => {
+    const probe = {
+      ok: false,
+      source: 'bearer-id',
+      scopesKnown: false,
+      missingScopes: [],
+      principal: undefined,
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🔴/)
+    assert.match(field, /ID token/)
+    assert.match(field, /rejected/i)
+  })
+
+  test('When probe has unknown source, then it shows generic authentication failed', () => {
+    const probe = {
+      ok: false,
+      source: 'unknown-source',
+      scopesKnown: false,
+      missingScopes: [],
+      principal: undefined,
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🔴/)
+    assert.match(field, /authentication.*failed/i)
+  })
+
+  test('When probe has source adc, ok is true, but scopes unknown, then it shows unable to verify', () => {
+    const probe = {
+      ok: true,
+      source: 'adc',
+      scopesKnown: false,
+      missingScopes: [],
+      principal: 'tim@example.com',
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🟡/)
+    assert.match(field, /unable to verify/i)
+  })
+
+  test('When probe has source adc with missing scopes, then it reports the missing ratio', () => {
+    const missingCount = 2
+    const probe = {
+      ok: true,
+      source: 'adc',
+      scopesKnown: true,
+      missingScopes: [SCOPES.CHROME_MANAGEMENT_POLICY, SCOPES.ADMIN_DIRECTORY_ORGUNIT_READONLY],
+      principal: 'tim@example.com',
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🔴/)
+    assert.ok(field.includes(`${missingCount} of ${REQUIRED.length}`), `expected "K of N missing"; got: ${field}`)
+    assert.match(field, /missing/i)
+  })
+
+  test('When probe lacks source field, it falls back to legacy ADC behavior with valid field', () => {
+    const legacyProbe = {
+      valid: true,
+      email: 'user@example.com',
+      missingScopes: [],
+      scopesKnown: true,
+    }
+    const field = buildScopesField(legacyProbe, REQUIRED)
+    assert.match(field, /🟢/)
+    assert.ok(field.includes(String(REQUIRED.length)), `field should include the verified scope count: ${field}`)
+  })
+
+  test('When probe lacks source but has ok field instead of valid, it treats ok as the status flag', () => {
+    const probe = {
+      ok: false,
+      email: null,
+      missingScopes: [],
+      scopesKnown: false,
+    }
+    const field = buildScopesField(probe, REQUIRED)
+    assert.match(field, /🔴/)
+    assert.match(field, /ADC/)
+    assert.match(field, /not configured/i)
+  })
 })
 
 describe('buildAuthRemediationLines', () => {
@@ -132,7 +286,7 @@ describe('buildAuthRemediationLines', () => {
 
   test('When some scopes are missing, then it explains why and lists the gaps after the command', () => {
     const lines = buildAuthRemediationLines(adcValidPartial, REQUIRED)
-    assert.ok(lines[0].includes(`${adcValidPartial.missingScopes.length} required scope`))
+    assert.match(lines[0], new RegExp(`${adcValidPartial.missingScopes.length} required scope`))
     assert.match(lines[0], /re-authorize/i)
     const missingHeaderIdx = lines.findIndex(l => l === 'Missing:')
     assert.ok(missingHeaderIdx > 0, 'expected a "Missing:" header listing the gaps')
@@ -190,6 +344,32 @@ describe('buildAuthRemediationLines', () => {
         `scope "${scope}" must be a full googleapis.com/auth/ URL; short-form scopes trigger gcloud's "Scope has changed" abort`,
       )
     }
+  })
+})
+
+describe('buildOAuthClientField', () => {
+  test('When source is managed, then it returns "OAuth client: Google-managed"', () => {
+    assert.equal(
+      buildOAuthClientField({ clientId: 'a', clientSecret: 'b', source: 'managed' }),
+      'OAuth client: Google-managed',
+    )
+  })
+  test('When source is custom, then it returns "OAuth client: custom (<first 8 chars>...)"', () => {
+    assert.equal(
+      buildOAuthClientField({ clientId: '1234567890abcdef', clientSecret: 'b', source: 'custom' }),
+      'OAuth client: custom (12345678...)',
+    )
+  })
+  test('When the custom client_id is shorter than 8 chars, then it returns the full id followed by ...', () => {
+    assert.equal(
+      buildOAuthClientField({ clientId: 'short', clientSecret: 'b', source: 'custom' }),
+      'OAuth client: custom (short...)',
+    )
+  })
+  test('When config is null, then it returns a TODO line flagging the unprovisioned managed client', () => {
+    const text = buildOAuthClientField(null)
+    assert.match(text, /TODO/)
+    assert.match(text, /CEP_OAUTH_CLIENT_ID/)
   })
 })
 
