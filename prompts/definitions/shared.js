@@ -22,7 +22,7 @@ limitations under the License.
  * Markdown-formatted diagnostic output rules appended to health-check prompts.
  * Defines the status table format, failure handling, severity tiers, and tone.
  */
-export const SHARED_DIAGNOSTIC_RULES = `3. Summarize your findings using the following structural rules:
+export const SHARED_DIAGNOSTIC_RULES = `Summarize your findings using the following structural rules:
 
 **Top Finding (Lead With the Headline)**
 Begin your response with a single bold sentence — preceded by **Top finding:** — that states the most consequential thing the administrator needs to know. Pick the upstream dependency, not a leaf observation. Examples of what counts as a top finding:
