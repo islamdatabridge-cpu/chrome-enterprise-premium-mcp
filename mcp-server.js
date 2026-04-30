@@ -226,6 +226,16 @@ export function createSseHandler(gcpInfo, sseTransports, getServerImpl = getServ
       sseTransports[transport.sessionId] = transport
       res.on('close', () => {
         delete sseTransports[transport.sessionId]
+        try {
+          transport.close()
+        } catch (e) {
+          logger.error(`${TAGS.MCP} Error closing SSE transport:`, e)
+        }
+        try {
+          server.close()
+        } catch (e) {
+          logger.error(`${TAGS.MCP} Error closing SSE server:`, e)
+        }
       })
       await server.connect(transport)
     } catch (error) {
@@ -407,13 +417,19 @@ async function main() {
         if (transport) {
           await transport.handlePostMessage(req, res, req.body)
         } else {
-          res.status(400).send('No transport found for sessionId')
+          // Log the unknown sessionId server-side so an operator can correlate
+          // the failure with their /sse stream. We deliberately do not echo it
+          // back: that would reflect a user-controlled query string into the
+          // response body and trip the reflected-XSS detector regardless of
+          // the response content type.
+          logger.warn(`${TAGS.MCP} /messages: no transport found for sessionId: ${String(sessionId)}`)
+          res.status(400).send('No transport found for the provided sessionId')
         }
       })
 
       const PORT = process.env.PORT || 0
-      const server = app.listen(PORT, () => {
-        const address = server.address()
+      const httpServer = app.listen(PORT, () => {
+        const address = httpServer.address()
         if (address) {
           const assignedPort = address.port
           // Use console.log directly so smoke tests waiting for this line
@@ -421,7 +437,7 @@ async function main() {
           console.log(`${TAGS.MCP} Chrome Enterprise Premium MCP server listening on port ${assignedPort}`)
         }
       })
-      server.on('error', e => {
+      httpServer.on('error', e => {
         if (e.code === 'EADDRINUSE') {
           logger.error(`${TAGS.MCP} Fatal error: Port ${PORT} is already in use.`)
           // eslint-disable-next-line n/no-process-exit
