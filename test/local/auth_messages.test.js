@@ -286,7 +286,10 @@ describe('buildAuthRemediationLines', () => {
 
   test('When some scopes are missing, then it explains why and lists the gaps after the command', () => {
     const lines = buildAuthRemediationLines(adcValidPartial, REQUIRED)
-    assert.match(lines[0], new RegExp(`${adcValidPartial.missingScopes.length} required scope`))
+    assert.ok(
+      lines[0].includes(`${adcValidPartial.missingScopes.length} required scope`),
+      `expected line to mention "${adcValidPartial.missingScopes.length} required scope"; got: ${lines[0]}`,
+    )
     assert.match(lines[0], /re-authorize/i)
     const missingHeaderIdx = lines.findIndex(l => l === 'Missing:')
     assert.ok(missingHeaderIdx > 0, 'expected a "Missing:" header listing the gaps')
