@@ -1,0 +1,27 @@
+area:tools:
+  - changed-files:
+      - any-glob-to-any-file: 'tools/**'
+
+area:evals:
+  - changed-files:
+      - any-glob-to-any-file: 'test/evals/**'
+
+area:tests:
+  - changed-files:
+      - any-glob-to-any-file: 'test/**'
+
+area:server:
+  - changed-files:
+      - any-glob-to-any-file: 'mcp-server.js'
+
+area:ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
+
+area:docs:
+  - changed-files:
+      - any-glob-to-any-file: ['README.md', 'docs/**', 'CONTRIBUTING.md']
+
+area:security:
+  - changed-files:
+      - any-glob-to-any-file: ['lib/util/auth*.js', 'lib/util/gcp.js', 'tools/utils/wrapper.js']
