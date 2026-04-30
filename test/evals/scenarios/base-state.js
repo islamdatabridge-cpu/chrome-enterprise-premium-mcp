@@ -379,5 +379,18 @@ export function getBaseState() {
         },
       },
     },
+
+    // Connector policies. Shape: customerId -> orgUnitId -> schema -> policy[]. Empty by default.
+    connectorPolicies: {},
+
+    // Service Usage state. All APIs ENABLED by default.
+    serviceUsage: {
+      'chromemanagement.googleapis.com': 'ENABLED',
+      'chromepolicy.googleapis.com': 'ENABLED',
+      'admin.googleapis.com': 'ENABLED',
+      'cloudidentity.googleapis.com': 'ENABLED',
+      'licensing.googleapis.com': 'ENABLED',
+      'serviceusage.googleapis.com': 'ENABLED',
+    },
   }
 }
