@@ -22,8 +22,10 @@ results*.json
 # Commit messages
 .commitmsg
 
-# Settings
+# Local CLI / agent state
+.claude/
 .gemini/
+.opencode/
 
 # ADK
 __pycache__/
