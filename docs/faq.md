@@ -33,6 +33,24 @@ Context-Aware Access. See
 [Chrome Enterprise Premium pricing](https://docs.cloud.google.com/chrome-enterprise-premium/docs/overview)
 for current rates.
 
+## Which auth path should I use?
+
+Three paths, by environment:
+
+- **Workstation, gcloud installed, you're the Cloud admin:** ADC. Run
+  `gcloud auth application-default login` per the
+  [Quick Start](../README.md#1-authenticate-with-google-cloud).
+- **Workstation, no gcloud or not the Cloud admin:** OAuth flow. Run
+  `mcp auth login`. Setup walkthrough at
+  [`docs/auth-bring-your-own-oauth-client.md`](auth-bring-your-own-oauth-client.md).
+- **Hosted (Cloud Run, Vertex AI Agent Engine, etc.):** OAuth bearer
+  on each request. The caller sets `Authorization: Bearer <id-token>`;
+  the server verifies via `CEP_BEARER_AUDIENCE` (see
+  [`docs/configuration.md`](configuration.md#inbound-bearer-id-token-verification-http-mode)).
+  SA + DWD is the alternative (see the next entry); for new hosted
+  deployments, OAuth is preferred because SA + DWD grants the server
+  impersonation rights for any user in the domain.
+
 ## Can I use a service account instead of user credentials?
 
 Yes, but the service account must have
