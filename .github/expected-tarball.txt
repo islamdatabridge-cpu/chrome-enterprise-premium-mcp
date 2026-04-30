@@ -52,7 +52,6 @@ lib/util/banner-logo.js
 lib/util/banner.js
 lib/util/cel_validator.js
 lib/util/chrome_dlp_constants.js
-lib/util/fake-auth-provider.js
 lib/util/feature_flags.js
 lib/util/gcp.js
 lib/util/google-auth-provider.js
