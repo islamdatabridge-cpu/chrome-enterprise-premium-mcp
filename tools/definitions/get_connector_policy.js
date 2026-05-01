@@ -19,10 +19,11 @@ limitations under the License.
  */
 
 import { z } from 'zod'
-import { guardedToolCall, formatToolResponse, safeFormatResponse, formatStatus } from '../utils/wrapper.js'
+import { guardedToolCall, formatToolResponse, safeFormatResponse } from '../utils/wrapper.js'
 import { commonOutputSchemas } from './shared.js'
-import { CONNECTOR_KEY_MAPPING, POLICY_DISPLAY_NAMES, EVENT_NAME_MAPPING } from '../../lib/constants.js'
+import { CONNECTOR_KEY_MAPPING, POLICY_DISPLAY_NAMES } from '../../lib/constants.js'
 import { ConnectorPolicyFilter } from '../../lib/api/chromepolicy.js'
+import { analyzeConnectorPolicy, humanize } from '../../lib/util/connector_policy_helper.js'
 
 /**
  * Registers the 'get_connector_policy' tool with the MCP server.
@@ -108,21 +109,6 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
               function flattenAndMapConfig(obj, warnings = []) {
                 const result = {}
                 const rawValues = {}
-                const humanize = val => {
-                  if (typeof val === 'boolean') {
-                    return val ? 'Yes' : 'No'
-                  }
-                  if (Array.isArray(val)) {
-                    return val.map(humanize).join(', ')
-                  }
-                  if (typeof val !== 'string') {
-                    return String(val)
-                  }
-                  if (EVENT_NAME_MAPPING[val]) {
-                    return EVENT_NAME_MAPPING[val]
-                  }
-                  return formatStatus(val.replace(/^[A-Z_]+_ENUM_/, '').replace(/^SERVICE_PROVIDER_/, ''))
-                }
 
                 const walk = (o, prefix = '') => {
                   if (!o || typeof o !== 'object') {
@@ -168,141 +154,32 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
 
               const formattedPolicies = raw.map(p => {
                 const v = p.value?.value || {}
-                const warnings = []
-                const { flattened, rawValues } = flattenAndMapConfig(v, warnings)
-                let isEnabled = true
+                const localWarnings = []
+                const { flattened } = flattenAndMapConfig(v, localWarnings)
 
-                if (policy === 'ON_SECURITY_EVENT') {
+                // Use shared logic for health/protection analysis
+                const analysis = analyzeConnectorPolicy(policy, [p], manualUpdateLink)
+
+                if (policy === 'ON_SECURITY_EVENT' && analysis.isEnabled) {
                   const eventCfg =
                     v.reportingConnector?.setting?.eventConfiguration || v.reportingConnector?.eventConfiguration
                   const events = eventCfg?.enabledEventNames || []
                   const explicitlyEmpty = eventCfg?.explicitlyEmptyEventNames
-                  const coreEvents = [
-                    'contentTransferEvent',
-                    'unscannedFileEvent',
-                    'dangerousDownloadEvent',
-                    'sensitiveDataEvent',
-                    'interstitialEvent',
-                    'urlFilteringInterstitialEvent',
-                    'suspiciousUrlEvent',
-                  ]
-
-                  if (!eventCfg) {
-                    isEnabled = false
-                    warnings.push(
-                      'Connector is not enabled. You can enable it using the enable_chrome_enterprise_connectors tool.',
-                    )
-                  } else {
-                    let missingCoreEvents = []
-                    if (events.length > 0) {
-                      missingCoreEvents = coreEvents.filter(e => !events.includes(e))
-                    } else if (explicitlyEmpty) {
-                      missingCoreEvents = coreEvents
-                    }
-
-                    if (missingCoreEvents.length > 0) {
-                      const mappedMissing = missingCoreEvents.map(e => EVENT_NAME_MAPPING[e] || e)
-                      warnings.push(
-                        `Missing core DLP events: ${mappedMissing.join(', ')}. Update settings manually at ${manualUpdateLink}`,
-                      )
-                    } else if (events.length === 0 && !explicitlyEmpty) {
-                      flattened['Reporting Status'] = 'All Core Events Enabled (Default)'
-                    }
-                  }
-                } else if (policy === 'ON_REALTIME_URL_NAVIGATION') {
-                  const checkEnabled = v.realtimeUrlCheckEnabled
-                  if (
-                    checkEnabled === false ||
-                    checkEnabled === 'REALTIME_URL_CHECK_MODE_ENUM_DISABLED' ||
-                    checkEnabled === 'ENTERPRISE_REAL_TIME_URL_CHECK_MODE_ENUM_DISABLED' ||
-                    checkEnabled === 'REALTIME_URL_CHECK_MODE_ENUM_UNSPECIFIED' ||
-                    checkEnabled === 'ENTERPRISE_REAL_TIME_URL_CHECK_MODE_ENUM_UNSPECIFIED'
-                  ) {
-                    isEnabled = false
-                  } else {
-                    flattened["serviceProvider (describe to user as 'Provider')"] = 'Chrome Enterprise Premium'
-                  }
-                } else {
-                  // Non-Reporting Connectors (Upload, Download, Paste, Print)
-                  const cfg =
-                    v.onFileAttachedAnalysisConnectorConfiguration?.fileAttachedConfiguration ||
-                    v.onFileDownloadedAnalysisConnectorConfiguration?.fileDownloadedConfiguration ||
-                    v.onBulkTextEntryAnalysisConnectorConfiguration?.bulkTextEntryConfiguration ||
-                    v.onPrintAnalysisConnectorConfiguration?.printConfigurations?.[0] ||
-                    v
-
-                  const isCEP = cfg.serviceProvider === 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM'
-                  const isNone =
-                    !cfg.serviceProvider ||
-                    cfg.serviceProvider === 'SERVICE_PROVIDER_NONE' ||
-                    cfg.serviceProvider === 'SERVICE_PROVIDER_UNSPECIFIED'
-
-                  if (isCEP) {
-                    if (!cfg.delayDeliveryUntilVerdict && !cfg.delay_delivery_until_verdict) {
-                      warnings.push(
-                        `Delay enforcement is disabled. Users are unprotected during content analysis. Update settings manually at ${manualUpdateLink}`,
-                      )
-                    }
-
-                    // Gapped Protection Warnings
-                    const checkGaps = (type, onByDefault, patterns) => {
-                      if (onByDefault === 'No') {
-                        if (patterns && patterns.length > 0) {
-                          warnings.push(
-                            `⚠️ ${type} Analysis is restricted. Scanning is ONLY enabled for specific URL patterns, which may leave your organization vulnerable. Update settings manually at ${manualUpdateLink}`,
-                          )
-                        } else {
-                          warnings.push(
-                            `⚠️ ${type} Analysis is restricted. Scanning is NOT enabled for all files, which may leave your organization vulnerable. Update settings manually at ${manualUpdateLink}`,
-                          )
-                        }
-                      } else if (patterns && patterns.length > 0) {
-                        warnings.push(
-                          `⚠️ ${type} Analysis is restricted. Scanning is DISABLED for specific URL patterns, which may leave your organization vulnerable. Update settings manually at ${manualUpdateLink}`,
-                        )
-                      }
-                    }
-
-                    // Audit Malware settings (typically found in Upload/Download).
-                    // Note: Malware settings are not present in Bulk Text (Paste) or Print connectors.
-                    if (rawValues.malwareOnByDefault !== undefined) {
-                      checkGaps('Malware', rawValues.malwareOnByDefault, rawValues.malwareUrlPatterns)
-                    }
-                    // Audit Sensitive Data settings (found in Upload/Download/Print/Paste).
-                    if (rawValues.sensitiveOnByDefault !== undefined) {
-                      checkGaps('Sensitive', rawValues.sensitiveOnByDefault, rawValues.sensitiveUrlPatterns)
-                    }
-
-                    // Fallback for connectors that don't use the new prefixed fields yet
-                    if (rawValues.malwareOnByDefault === undefined && rawValues.sensitiveOnByDefault === undefined) {
-                      if (cfg.malwareUrlPatterns?.length > 0 || cfg.sensitiveUrlPatterns?.length > 0) {
-                        warnings.push(
-                          `Security posture is limited due to URL allowlisting. Update settings manually at ${manualUpdateLink}`,
-                        )
-                      }
-                    }
-                  } else if (isNone) {
-                    isEnabled = false
-                    warnings.push(
-                      'Connector is not enabled. You can enable it using the enable_chrome_enterprise_connectors tool.',
-                    )
-                  } else {
-                    const is3p =
-                      cfg.serviceProvider === 'SERVICE_PROVIDER_SYMANTEC_ENDPOINT_DLP' ||
-                      cfg.serviceProvider === 'SERVICE_PROVIDER_TRELLIX'
-                    if (is3p) {
-                      warnings.push(
-                        `3rd party provider detected. Integrated CEP features may be bypassed. Update settings manually at ${manualUpdateLink}`,
-                      )
-                    }
+                  if (events.length === 0 && !explicitlyEmpty && eventCfg) {
+                    flattened['Reporting Status'] = 'All Core Events Enabled (Default)'
                   }
                 }
 
-                if (warnings.length > 0) {
-                  flattened['warnings'] = warnings.join('; ')
+                if (policy === 'ON_REALTIME_URL_NAVIGATION' && analysis.isEnabled) {
+                  flattened["serviceProvider (describe to user as 'Provider')"] = 'Chrome Enterprise Premium'
                 }
 
-                return { ...flattened, isEnabled }
+                const combinedWarnings = [...localWarnings, ...analysis.warnings]
+                if (combinedWarnings.length > 0) {
+                  flattened['warnings'] = combinedWarnings.join('; ')
+                }
+
+                return { ...flattened, isEnabled: analysis.isEnabled }
               })
 
               const allWarnings = formattedPolicies.flatMap(p => (p.warnings ? [p.warnings] : []))
