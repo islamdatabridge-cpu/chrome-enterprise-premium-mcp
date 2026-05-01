@@ -91,8 +91,6 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
             authToken,
           )
 
-          const displayName = POLICY_DISPLAY_NAMES[policy] || policy
-
           return safeFormatResponse({
             rawData: policies,
             toolName: 'get_connector_policy',
@@ -108,7 +106,6 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
                */
               function flattenAndMapConfig(obj, warnings = []) {
                 const result = {}
-                const rawValues = {}
 
                 const walk = (o, prefix = '') => {
                   if (!o || typeof o !== 'object') {
@@ -136,7 +133,6 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
                       walk(v, nextPrefix)
                     } else {
                       const humanizedValue = humanize(v)
-                      rawValues[targetKey] = humanizedValue
                       const mappedKey = CONNECTOR_KEY_MAPPING[targetKey]
                         ? `${targetKey} (describe to user as '${CONNECTOR_KEY_MAPPING[targetKey]}')`
                         : targetKey
@@ -149,7 +145,7 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
                   }
                 }
                 walk(obj)
-                return { flattened: result, rawValues }
+                return { flattened: result }
               }
 
               const formattedPolicies = raw.map(p => {
@@ -158,7 +154,24 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
                 const { flattened } = flattenAndMapConfig(v, localWarnings)
 
                 // Use shared logic for health/protection analysis
-                const analysis = analyzeConnectorPolicy(policy, [p], manualUpdateLink)
+                const analysis = analyzeConnectorPolicy(policy, [p])
+
+                // Process findings into tool-specific warning strings with links
+                const findingWarnings = analysis.findings.map(f => {
+                  if (f.remediationType === 'manual') {
+                    return `${f.message}. Update settings manually at ${manualUpdateLink}`
+                  }
+                  return f.message
+                })
+
+                // If the connector itself is disabled, add the primary remediation guidance
+                if (!analysis.isEnabled) {
+                  findingWarnings.push(
+                    'Connector is not enabled. You can enable it using the enable_chrome_enterprise_connectors tool.',
+                  )
+                }
+
+                const finalWarnings = [...localWarnings, ...findingWarnings]
 
                 if (policy === 'ON_SECURITY_EVENT' && analysis.isEnabled) {
                   const eventCfg =
@@ -174,31 +187,35 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
                   flattened["serviceProvider (describe to user as 'Provider')"] = 'Chrome Enterprise Premium'
                 }
 
-                const combinedWarnings = [...localWarnings, ...analysis.findings.map(f => f.message)]
-                if (combinedWarnings.length > 0) {
-                  flattened['warnings'] = combinedWarnings.join('; ')
+                if (finalWarnings.length > 0) {
+                  flattened['warnings'] = finalWarnings.join('; ')
                 }
 
-                return { ...flattened, isEnabled: analysis.isEnabled }
+                return { ...flattened, isEnabled: analysis.isEnabled, analysisFindings: finalWarnings }
               })
 
-              const allWarnings = formattedPolicies.flatMap(p => (p.warnings ? [p.warnings] : []))
+              const allWarnings = formattedPolicies.flatMap(p => p.analysisFindings || [])
               const anyEnabled = formattedPolicies.some(p => p.isEnabled)
               const isConfigured = raw.length > 0 && anyEnabled
 
-              let summaryStr = `Connector policy: ${displayName} (OU: \`${orgUnitId}\`)\nStatus: ${isConfigured ? 'Configured' : 'Not configured'}`
-              if (allWarnings.length > 0) {
-                summaryStr += `\n\n⚠️ WARNINGS:\n- ${allWarnings.join('\n- ')}`
-              }
+              // Strip internal analysisFindings before returning
+              const cleanedPolicies = formattedPolicies.map(({ analysisFindings: _analysisFindings, ...p }) => p)
+
+              const title = `${POLICY_DISPLAY_NAMES[policy]} (OU: \`${orgUnitId}\`)`
+              const statusLine = `Status: ${isConfigured ? 'Configured' : 'Not configured'}`
+              const warningSection = allWarnings.length > 0 ? `\n\n⚠️ WARNINGS:\n- ${allWarnings.join('\n- ')}` : ''
+
+              const summary = `Connector policy: ${title}\n${statusLine}${warningSection}`
 
               return formatToolResponse({
-                summary: summaryStr,
-                data: formattedPolicies,
+                summary,
+                data: cleanedPolicies,
                 structuredContent: {
-                  connectorPolicies: formattedPolicies,
+                  connectorPolicies: cleanedPolicies,
                   connectorType: policy,
                   orgUnitId,
                   configured: isConfigured,
+                  warnings: allWarnings,
                 },
               })
             },
