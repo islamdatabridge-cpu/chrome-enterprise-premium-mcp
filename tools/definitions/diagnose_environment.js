@@ -30,14 +30,15 @@ import { TAGS, CONNECTOR_DISPLAY_NAMES } from '../../lib/constants.js'
 import { logger } from '../../lib/util/logger.js'
 import { ConnectorPolicyFilter } from '../../lib/api/chromepolicy.js'
 import { CHROME_ACTION_TYPES } from '../../lib/util/chrome_dlp_constants.js'
+import { analyzeConnectorPolicy } from '../../lib/util/connector_policy_helper.js'
 
 const CONNECTOR_TYPES = {
-  uploadAnalysis: ConnectorPolicyFilter.ON_FILE_ATTACHED,
-  downloadAnalysis: ConnectorPolicyFilter.ON_FILE_DOWNLOAD,
-  pasteAnalysis: ConnectorPolicyFilter.ON_BULK_TEXT_ENTRY,
-  printAnalysis: ConnectorPolicyFilter.ON_PRINT,
-  realtimeUrlCheck: ConnectorPolicyFilter.ON_REALTIME_URL_NAVIGATION,
-  securityEventReporting: ConnectorPolicyFilter.ON_SECURITY_EVENT,
+  uploadAnalysis: 'ON_FILE_ATTACHED',
+  downloadAnalysis: 'ON_FILE_DOWNLOAD',
+  pasteAnalysis: 'ON_BULK_TEXT_ENTRY',
+  printAnalysis: 'ON_PRINT',
+  realtimeUrlCheck: 'ON_REALTIME_URL_NAVIGATION',
+  securityEventReporting: 'ON_SECURITY_EVENT',
 }
 
 const SEB_EXTENSION_SCHEMA = 'chrome.users.apps.InstallType'
@@ -69,13 +70,29 @@ function computeIssues(data) {
   }
 
   for (const [key, connector] of Object.entries(data.connectors || {})) {
+    const name = CONNECTOR_DISPLAY_NAMES[key] || key
     if (!connector.configured) {
-      const name = CONNECTOR_DISPLAY_NAMES[key] || key
       issues.push({
         severity: 'critical',
         component: `connector.${key}`,
         message: `${name} connector is not configured.`,
       })
+    } else if (!connector.isEnabled) {
+      issues.push({
+        severity: 'critical',
+        component: `connector.${key}`,
+        message: `${name} connector is present but explicitly disabled.`,
+      })
+    }
+
+    if (connector.isEnabled && connector.findings && connector.findings.length > 0) {
+      for (const finding of connector.findings) {
+        issues.push({
+          severity: 'high',
+          component: `connector.${key}`,
+          message: `${name}: ${finding.message}`,
+        })
+      }
     }
   }
 
@@ -218,12 +235,22 @@ async function fetchEnvironment(
   const connectors = {}
   if (rootOUId && chromePolicyClient) {
     const connectorResults = await Promise.all(
-      Object.entries(CONNECTOR_TYPES).map(async ([key, schema]) => {
+      Object.entries(CONNECTOR_TYPES).map(async ([key, policyKey]) => {
         try {
+          const schema = ConnectorPolicyFilter[policyKey]
           const policies = await chromePolicyClient.getConnectorPolicy(customerId, rootOUId, schema, authToken)
-          return [key, { configured: policies.length > 0, policyCount: policies.length }]
+          const analysis = analyzeConnectorPolicy(policyKey, policies)
+          return [
+            key,
+            {
+              configured: analysis.isConfigured,
+              isEnabled: analysis.isEnabled,
+              policyCount: policies.length,
+              findings: analysis.findings,
+            },
+          ]
         } catch {
-          return [key, { configured: false, policyCount: 0, error: true }]
+          return [key, { configured: false, isEnabled: false, policyCount: 0, error: true }]
         }
       }),
     )
