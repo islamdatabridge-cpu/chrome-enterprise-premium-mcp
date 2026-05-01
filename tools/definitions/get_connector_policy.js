@@ -174,7 +174,7 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
                   flattened["serviceProvider (describe to user as 'Provider')"] = 'Chrome Enterprise Premium'
                 }
 
-                const combinedWarnings = [...localWarnings, ...analysis.warnings]
+                const combinedWarnings = [...localWarnings, ...analysis.findings.map(f => f.message)]
                 if (combinedWarnings.length > 0) {
                   flattened['warnings'] = combinedWarnings.join('; ')
                 }
