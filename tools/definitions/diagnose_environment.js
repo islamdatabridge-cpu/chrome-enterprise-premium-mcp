@@ -386,6 +386,7 @@ function buildSummaryResponse(env) {
   const medium = sc.issues.filter(i => i.severity === 'medium').length
 
   let summary = `## Environment Health Check\n\n`
+  summary += `> **Scope:** Health check is scoped to the Root Organizational Unit (/). Sub-OU overrides are not included in this summary.\n\n`
   summary += `**Customer:** ${customer.customerId} (${customer.domain || 'unknown domain'})\n`
   summary += `**Org Units:** ${orgUnits.length}\n`
   summary += `**CEP Subscription:** ${subscription.isActive ? `Active (${subscription.assignmentCount} licenses)` : 'Not active'}\n`

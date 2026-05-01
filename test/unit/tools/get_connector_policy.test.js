@@ -96,7 +96,7 @@ describe('get_connector_policy tool handler', () => {
 
     // Verify accurate status reporting
     assert.match(summary, /^Connector policy: Real-Time URL Check \(OU: `OU123`\)\nStatus: Not configured/)
-    assert.ok(summary.includes('Connector is not enabled'))
+    assert.ok(summary.includes('Real-time URL check is explicitly disabled'))
 
     // Verify JSON details
     assert.match(dataText, /"isEnabled": false/)
