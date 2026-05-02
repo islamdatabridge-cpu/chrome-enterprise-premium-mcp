@@ -168,4 +168,42 @@ describe('Chrome Management API', () => {
       assert.match(result.content[0].text, /API Error/)
     })
   })
+
+  describe('RealChromeManagementClient authToken threading', () => {
+    test('When countBrowserVersions is called with an authToken, then it is forwarded to getClient', async () => {
+      const { RealChromeManagementClient } = await import('../../lib/api/real_chrome_management_client.js')
+      const client = new RealChromeManagementClient()
+      let observedAuth = 'sentinel-not-set'
+      client.getClient = async authToken => {
+        observedAuth = authToken
+        return {
+          customers: {
+            reports: {
+              countChromeVersions: async () => ({ data: { browserVersions: [] } }),
+            },
+          },
+        }
+      }
+      await client.countBrowserVersions('C0123', null, 'TEST_BEARER_TOKEN')
+      assert.strictEqual(observedAuth, 'TEST_BEARER_TOKEN')
+    })
+
+    test('When listCustomerProfiles is called with an authToken, then it is forwarded to getClient', async () => {
+      const { RealChromeManagementClient } = await import('../../lib/api/real_chrome_management_client.js')
+      const client = new RealChromeManagementClient()
+      let observedAuth = 'sentinel-not-set'
+      client.getClient = async authToken => {
+        observedAuth = authToken
+        return {
+          customers: {
+            profiles: {
+              list: async () => ({ data: { chromeBrowserProfiles: [] } }),
+            },
+          },
+        }
+      }
+      await client.listCustomerProfiles('C0123', 'TEST_BEARER_TOKEN')
+      assert.strictEqual(observedAuth, 'TEST_BEARER_TOKEN')
+    })
+  })
 })
