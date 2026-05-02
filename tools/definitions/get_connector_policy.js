@@ -22,7 +22,7 @@ import { z } from 'zod'
 import { guardedToolCall, formatToolResponse, safeFormatResponse, formatStatus } from '../utils/wrapper.js'
 import { commonOutputSchemas } from './shared.js'
 import { CONNECTOR_KEY_MAPPING, POLICY_DISPLAY_NAMES, EVENT_NAME_MAPPING } from '../../lib/constants.js'
-import { ConnectorPolicyFilter } from '../../lib/api/chromepolicy.js'
+import { ConnectorPolicyFilter } from '../../lib/api/real_chrome_policy_client.js'
 
 /**
  * Registers the 'get_connector_policy' tool with the MCP server.
