@@ -23,7 +23,7 @@ import { dirname, resolve } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const SERVER_PATH = resolve(__dirname, '../../mcp-server.js')
+const SERVER_PATH = resolve(__dirname, '../../../mcp-server.js')
 
 describe('MCP Prompts', () => {
   let client
