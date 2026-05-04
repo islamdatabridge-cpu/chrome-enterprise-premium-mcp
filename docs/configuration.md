@@ -66,7 +66,10 @@ PORT=8080 GCP_STDIO=false npx -y @google/chrome-enterprise-premium-mcp@latest
 
 `lib/util/auth.js#getAuthClient` has three credential sources, in priority
 order: bearer header on the request, Application Default Credentials, OAuth
-token cache. Pick a setup based on environment.
+token cache. Pick a setup based on environment. For situational guidance by
+deployment shape, see the
+[Which auth path should I use?](faq.md#which-auth-path-should-i-use) FAQ
+entry.
 
 | Setup                      | Transport | Credential source                              | Setup walkthrough                                                                               |
 | :------------------------- | :-------- | :--------------------------------------------- | :---------------------------------------------------------------------------------------------- |

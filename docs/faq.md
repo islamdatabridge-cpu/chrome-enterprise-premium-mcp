@@ -45,11 +45,15 @@ Three paths, by environment:
   [`docs/auth-bring-your-own-oauth-client.md`](auth-bring-your-own-oauth-client.md).
 - **Hosted (Cloud Run, Vertex AI Agent Engine, etc.):** OAuth bearer
   on each request. The caller sets `Authorization: Bearer <id-token>`;
-  the server verifies via `CEP_BEARER_AUDIENCE` (see
-  [`docs/configuration.md`](configuration.md#inbound-bearer-id-token-verification-http-mode)).
-  SA + DWD is the alternative (see the next entry); for new hosted
-  deployments, OAuth is preferred because SA + DWD grants the server
-  impersonation rights for any user in the domain.
+  the server verifies via `CEP_BEARER_AUDIENCE`. SA + DWD is the
+  alternative (see the next entry); for new hosted deployments, OAuth
+  is preferred because SA + DWD grants the server impersonation rights
+  for any user in the domain.
+
+For the per-mechanism technical reference (transport, credential source,
+setup walkthrough), see the
+[Authentication matrix](configuration.md#authenticating-to-google-apis)
+in `configuration.md`.
 
 ## Can I use a service account instead of user credentials?
 
