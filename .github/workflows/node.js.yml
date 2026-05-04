@@ -70,3 +70,24 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:smoke
+
+  test-budget-tripwires:
+    name: 🚧 Test budget tripwires
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject subprocess imports in unit-suite test files
+        run: |
+          # Unit-suite test files (*.test.js under test/local/ or test/unit/)
+          # must not spawn subprocesses or speak MCP over stdio. Anything that
+          # does belongs in test/integration/server/ where the cost is honestly
+          # budgeted. Non-.test.js scripts (e.g. test/local/smoke-test.js) are
+          # exempt because they are invoked by their own npm script, not by the
+          # unit runner.
+          hits=$(find test/local test/unit -name '*.test.js' -exec grep -lE 'from .node:child_process|from .child_process|StdioClientTransport' {} + 2>/dev/null)
+          if [ -n "$hits" ]; then
+            echo "::error::The following unit-suite test files spawn subprocesses or import StdioClientTransport. Move them under test/integration/server/:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "OK: no subprocess imports in any *.test.js under test/local/ or test/unit/."
