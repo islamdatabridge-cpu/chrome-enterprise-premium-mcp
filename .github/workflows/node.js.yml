@@ -84,7 +84,10 @@ jobs:
           # budgeted. Non-.test.js scripts (e.g. test/local/smoke-test.js) are
           # exempt because they are invoked by their own npm script, not by the
           # unit runner.
-          hits=$(find test/local test/unit -name '*.test.js' -exec grep -lE 'from .node:child_process|from .child_process|StdioClientTransport' {} + 2>/dev/null)
+          # `|| true`: grep exits 1 on no-match, which under `bash -e` would
+          # incorrectly fail the step. We want the empty-result case to fall
+          # through to the `[ -n "$hits" ]` check below.
+          hits=$(find test/local test/unit -name '*.test.js' -exec grep -lE 'from .node:child_process|from .child_process|StdioClientTransport' {} + 2>/dev/null || true)
           if [ -n "$hits" ]; then
             echo "::error::The following unit-suite test files spawn subprocesses or import StdioClientTransport. Move them under test/integration/server/:"
             echo "$hits"
