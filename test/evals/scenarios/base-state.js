@@ -22,6 +22,8 @@ limitations under the License.
  * Scenario mutations in sibling files introduce targeted misconfigurations.
  */
 
+import { SERVICE_NAMES } from '../../../lib/constants.js'
+
 /**
  * Returns a fully-configured "healthy" CEP deployment state.
  * @returns {object} Complete fake server state object.
@@ -379,5 +381,13 @@ export function getBaseState() {
         },
       },
     },
+
+    // Connector policies. Shape: customerId -> orgUnitId -> schema -> policy[]. Empty by default.
+    connectorPolicies: {},
+
+    // Service Usage state. Every API in SERVICE_NAMES starts ENABLED so
+    // adding a new service does not silently break eval scenarios that
+    // touch it.
+    serviceUsage: Object.fromEntries(Object.values(SERVICE_NAMES).map(name => [name, 'ENABLED'])),
   }
 }

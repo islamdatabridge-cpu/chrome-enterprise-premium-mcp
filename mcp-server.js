@@ -376,17 +376,14 @@ export async function runServer() {
     }
     console.log(dim(`Active Experiments: ${activeExps}`))
 
-    // Maintain session state globally for all server connections
-    const sharedSessionState = {
-      customerId: null,
-      cachedRootOrgUnitId: null,
-      pendingRule: null,
-      history: [],
-    }
-
     if (isStdio) {
+      // Stdio is single-process and single-tenant, so a process-lifetime
+      // sessionState is correct. HTTP mode does not reach this branch and
+      // does not see this object — its handlers create per-request state
+      // via createSessionState() in createMcpPostHandler / createSseHandler.
+      const stdioSessionState = createSessionState()
       const stdioTransport = new StdioServerTransport()
-      const server = await getServer(gcpInfo, sharedSessionState)
+      const server = await getServer(gcpInfo, stdioSessionState)
       await server.connect(stdioTransport)
       logger.info(`${TAGS.MCP} Chrome Enterprise Premium MCP server stdio transport connected`)
     } else {

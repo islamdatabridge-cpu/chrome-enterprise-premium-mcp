@@ -667,7 +667,7 @@ export function createFakeApp() {
       state.activities.push(...data.items)
     } else if (data.kind === 'licensing#licenseAssignment') {
       const customerId = state.defaultCustomerId
-      if (!isSafeKey(data.productId) || !isSafeKey(data.skuId)) {
+      if (!isSafeKey(customerId) || !isSafeKey(data.productId) || !isSafeKey(data.skuId)) {
         return
       }
       if (!state.licenses[customerId]) {
@@ -682,6 +682,9 @@ export function createFakeApp() {
       state.licenses[customerId][data.productId][data.skuId].push(data)
     } else if (data.kind === 'licensing#licenseAssignmentList') {
       const customerId = state.defaultCustomerId
+      if (!isSafeKey(customerId)) {
+        return
+      }
       state.licenses[customerId] = Object.create(null) // Clear existing
       data.items.forEach(item => {
         if (!isSafeKey(item.productId) || !isSafeKey(item.skuId)) {
