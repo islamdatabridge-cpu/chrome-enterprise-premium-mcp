@@ -26,18 +26,15 @@ import express from 'express'
 import { randomUUID } from 'node:crypto'
 
 /**
- * Reserved prototype keys that must not be set on a plain object via
- * arbitrary fixture input — assigning to any of these would mutate
- * Object.prototype and affect every other object in the process.
- */
-const PROTO_POLLUTING_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
-
-/**
  * @param {string|number|undefined} key
  * @returns {boolean} true when the key is safe to use as a plain-object property.
  */
 function isSafeKey(key) {
-  return key !== undefined && !PROTO_POLLUTING_KEYS.has(String(key))
+  if (key === undefined || key === null) {
+    return false
+  }
+  const strKey = String(key)
+  return strKey !== '__proto__' && strKey !== 'constructor' && strKey !== 'prototype'
 }
 
 /**
