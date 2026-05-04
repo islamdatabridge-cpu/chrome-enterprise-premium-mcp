@@ -1,0 +1,56 @@
+# MCP tool definitions and shared tool utilities
+area:tools:
+  - changed-files:
+      - any-glob-to-any-file: ['tools/**']
+
+# Evaluation framework: cases, scenarios, fixtures, judge, loader, runner
+area:evals:
+  - changed-files:
+      - any-glob-to-any-file: ['test/evals/**']
+
+# Unit and integration tests (excludes evals — those get their own label)
+area:tests:
+  - changed-files:
+      - any-glob-to-any-file: ['test/local/**', 'test/unit/**', 'test/run-all.js', 'test/helpers/**']
+
+# MCP server entry point and core runtime (transport, lifecycle, lib/)
+area:server:
+  - changed-files:
+      - any-glob-to-any-file: ['mcp-server.js', 'lib/**']
+
+# System prompts, prompt definitions, and knowledge documents
+area:prompts:
+  - changed-files:
+      - any-glob-to-any-file: ['prompts/**', 'lib/knowledge/**']
+
+# GitHub Actions workflows, labeler config, CI/CD pipeline
+area:ci:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/**']
+
+# README, contributor guide, doc site, inline doc files
+area:docs:
+  - changed-files:
+      - any-glob-to-any-file: ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'docs/**', '**/*.md']
+
+# Auth, credentials, token handling, GCP identity, scope enforcement
+area:security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'lib/util/auth*.js'
+          - 'lib/util/gcp.js'
+          - 'lib/util/google-auth-provider.js'
+          - 'lib/util/cel_validator.js'
+          - 'lib/util/feature_flags.js'
+          - 'tools/utils/wrapper.js'
+          - 'SECURITY.md'
+
+# Dependency changes (package.json, lockfile, Dockerfile base image)
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: ['package.json', 'package-lock.json', 'Dockerfile']
+
+# Gemini extension integration
+area:gemini-extension:
+  - changed-files:
+      - any-glob-to-any-file: ['gemini-extension/**', 'gemini-extension.json']

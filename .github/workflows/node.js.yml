@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -22,6 +22,7 @@ env:
 
 jobs:
   lint:
+    name: 🧹 Lint & format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +34,7 @@ jobs:
       - run: npm run lint
 
   test-unit:
+    name: 🧪 Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,8 +44,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:unit
+        env:
+          NODE_OPTIONS: --test-reporter=spec
 
   test-integration-fake:
+    name: 🧪 Integration (fake backend)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +60,7 @@ jobs:
       - run: npm run test:integration:fake
 
   test-smoke:
+    name: 💨 Smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
