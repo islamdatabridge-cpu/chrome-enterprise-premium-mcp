@@ -456,7 +456,7 @@ describe('Cloud Identity API', () => {
          *
          */
         constructor() {
-          this.deleteDlpRule = mockDeleteDlpRule
+          this.deleteDlpRulePreValidated = mockDeleteDlpRule
           this.getDlpRule = mock.fn(async () => ({
             setting: { value: { displayName: '🤖 Test Rule' } },
           }))
