@@ -58,6 +58,16 @@ To run the agent locally, follow these steps:
     --no-launch-browser
     ```
 
+    OAuth-flow alternative (no `gcloud` needed; OAuth-narrow scope set,
+    no `cloud-platform`):
+
+    ```bash
+    mcp auth login
+    ```
+
+    Setup walkthrough at
+    [`docs/auth-bring-your-own-oauth-client.md`](../../docs/auth-bring-your-own-oauth-client.md).
+
 2.  **Start the ADK server:**
 
     ```bash

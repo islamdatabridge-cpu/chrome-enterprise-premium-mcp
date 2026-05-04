@@ -24,5 +24,12 @@ commands) we want it to cite when answering CEP questions.
 
 The extension manifest at the repo root
 ([`gemini-extension.json`](../gemini-extension.json)) points at this
-file, declares the OAuth scopes the agent requests on first run, and
-tells Gemini CLI to launch `mcp-server.js` as the MCP backend.
+file, declares the OAuth scopes Gemini CLI prompts for at install
+time, and tells Gemini CLI to launch `mcp-server.js` as the MCP
+backend.
+
+> **`oauth_scopes` is install-time only.** The list lives in the
+> manifest so Gemini CLI has the right consent screen during
+> `gemini extension install`. The MCP server's runtime scope list is
+> in `lib/constants.js#SCOPES`, separate from the manifest. Updating
+> one without the other is a real foot-gun.
