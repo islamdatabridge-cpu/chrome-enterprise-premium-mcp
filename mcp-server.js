@@ -349,33 +349,36 @@ async function main() {
     const requiredScopes = Object.values(SCOPES)
     const adc = await probeADC(requiredScopes)
 
-    printBanner({
-      transport: isStdio ? 'Stdio' : ['SSE/HTTP', `(Port: ${process.env.PORT || '0'})`],
-      auth: isStdio ? ['None', '(Local channel)'] : ['None', '(Unauthenticated)'],
-      apiCreds: adc.valid ? ['ADC', adc.email ? `(${adc.email})` : '(detected)'] : ['ADC', '(not configured)'],
-      scopes: buildScopesField(adc, requiredScopes),
-      dataAccess: process.env.GOOGLE_API_ROOT_URL ? 'Fake' : 'Production',
-      knowledge: ['lib/knowledge', `(${articleCount} articles)`],
-    })
-    const remediation = buildAuthRemediationLines(adc, requiredScopes)
-    if (remediation) {
-      console.log()
-      for (const line of remediation) {
-        console.log(dim(line))
+    const printServerStatus = assignedPort => {
+      printBanner({
+        transport: isStdio ? 'Stdio' : ['SSE/HTTP', `(Port: ${assignedPort})`],
+        auth: isStdio ? ['None', '(Local channel)'] : ['None', '(Unauthenticated)'],
+        apiCreds: adc.valid ? ['ADC', adc.email ? `(${adc.email})` : '(detected)'] : ['ADC', '(not configured)'],
+        scopes: buildScopesField(adc, requiredScopes),
+        dataAccess: process.env.GOOGLE_API_ROOT_URL ? 'Fake' : 'Production',
+        knowledge: ['lib/knowledge', `(${articleCount} articles)`],
+      })
+      const remediation = buildAuthRemediationLines(adc, requiredScopes)
+      if (remediation) {
+        console.log()
+        for (const line of remediation) {
+          console.log(dim(line))
+        }
+        console.log()
       }
-      console.log()
-    }
-    const quotaWarning = buildQuotaProjectWarning(adc)
-    if (quotaWarning) {
-      console.log()
-      for (const line of quotaWarning) {
-        console.log(dim(line))
+      const quotaWarning = buildQuotaProjectWarning(adc)
+      if (quotaWarning) {
+        console.log()
+        for (const line of quotaWarning) {
+          console.log(dim(line))
+        }
+        console.log()
       }
-      console.log()
+      console.log(dim(`Active Experiments: ${activeExps}`))
     }
-    console.log(dim(`Active Experiments: ${activeExps}`))
 
     if (isStdio) {
+      printServerStatus()
       // Stdio is single-process and single-tenant, so a process-lifetime
       // sessionState is correct. HTTP mode does not reach this branch and
       // does not see this object — its handlers create per-request state
@@ -429,6 +432,7 @@ async function main() {
         const address = httpServer.address()
         if (address) {
           const assignedPort = address.port
+          printServerStatus(assignedPort)
           // Use console.log directly so smoke tests waiting for this line
           // are not silenced by CEP_LOG_LEVEL=SILENT.
           console.log(`${TAGS.MCP} Chrome Enterprise Premium MCP server listening on port ${assignedPort}`)
