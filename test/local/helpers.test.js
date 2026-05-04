@@ -19,8 +19,6 @@ import assert from 'node:assert/strict'
 import esmock from 'esmock'
 import { logger, LogLevel } from '../../lib/util/logger.js'
 
-const LOG_LEVEL_OFF = 4
-
 describe('Helpers', () => {
   describe('callWithRetry', () => {
     let callWithRetry
@@ -71,7 +69,7 @@ describe('Helpers', () => {
     })
 
     test('When QUOTA_PROJECT_NOT_SET error occurs, then it throws a helpful message and does not retry', async () => {
-      logger.setLevel(LOG_LEVEL_OFF) // Suppress expected error logs
+      logger.setLevel(LogLevel.SILENT) // Suppress expected error logs
       try {
         let attempts = 0
         const quotaError = new Error(
@@ -99,7 +97,7 @@ describe('Helpers', () => {
     })
 
     test('When INSUFFICIENT_SCOPES error occurs, then it throws a helpful message and does not retry', async () => {
-      logger.setLevel(LOG_LEVEL_OFF) // Suppress expected error logs
+      logger.setLevel(LogLevel.SILENT) // Suppress expected error logs
       try {
         let attempts = 0
         const scopeError = new Error('Request had insufficient authentication scopes.')
