@@ -420,8 +420,10 @@ export async function runServer() {
         })
       } else {
         logger.warn(
-          `${TAGS.MCP} CEP_BEARER_AUDIENCE is unset; ID-token verification is off. ` +
-            `Set CEP_BEARER_AUDIENCE to the OAuth client id this server expects so forged bearers are rejected ahead of any forward to Google.`,
+          `${TAGS.MCP} CEP_BEARER_AUDIENCE is not set.\n` +
+            `Inbound bearer tokens are forwarded to Google without local verification; bad tokens are rejected by Google rather than at this server's boundary.\n` +
+            `Set CEP_BEARER_AUDIENCE to the expected OAuth client ID to verify tokens locally and attribute requests to a verified principal.\n` +
+            `Setup: https://github.com/google/chrome-enterprise-premium-mcp/blob/main/docs/configuration.md#inbound-bearer-id-token-verification-http-mode`,
         )
       }
 
