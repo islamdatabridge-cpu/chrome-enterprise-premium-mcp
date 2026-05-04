@@ -2,10 +2,6 @@ LICENSE
 README.md
 lib/README.md
 lib/api/README.md
-lib/api/admin_sdk.js
-lib/api/chromemanagement.js
-lib/api/chromepolicy.js
-lib/api/cloudidentity.js
 lib/api/interfaces/admin_sdk_client.js
 lib/api/interfaces/chrome_management_client.js
 lib/api/interfaces/chrome_policy_client.js
@@ -52,6 +48,7 @@ lib/util/banner-logo.js
 lib/util/banner.js
 lib/util/cel_validator.js
 lib/util/chrome_dlp_constants.js
+lib/util/connector_policy_helper.js
 lib/util/feature_flags.js
 lib/util/gcp.js
 lib/util/google-auth-provider.js
