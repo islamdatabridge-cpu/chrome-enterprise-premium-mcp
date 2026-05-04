@@ -45,6 +45,7 @@ import { featureFlags, FLAGS } from './lib/util/feature_flags.js'
 import { logger } from './lib/util/logger.js'
 import { printBanner, dim } from './lib/util/banner.js'
 import { buildScopesField, buildAuthRemediationLines, buildQuotaProjectWarning } from './lib/util/auth_messages.js'
+import { verifyIdToken, parseExpectedAudience } from './lib/util/credential/jwt_verifier.js'
 import { TAGS, SCOPES } from './lib/constants.js'
 
 // Import Real Clients
@@ -389,6 +390,39 @@ export async function runServer() {
       logger.info(`${TAGS.MCP} Stdio transport mode is turned off.`)
       const app = express()
       app.use(express.json())
+
+      const expectedAudience = parseExpectedAudience(process.env.CEP_BEARER_AUDIENCE)
+      if (expectedAudience) {
+        // Trust-boundary middleware: every /mcp, /sse, /messages request must
+        // carry a Google-signed ID token whose `aud` matches the expected
+        // audience. Forged or missing bearers get 401 ahead of any handler.
+        const audienceList = Array.isArray(expectedAudience) ? expectedAudience : [expectedAudience]
+        logger.info(`${TAGS.MCP} Bearer ID-token verification is on; audience: ${audienceList.join(', ')}`)
+        app.use(async (req, res, next) => {
+          const auth = req.headers.authorization
+          if (!auth || !auth.toLowerCase().startsWith('bearer ')) {
+            res.status(401).json({ error: 'Bearer token required' })
+            return
+          }
+          const token = auth.slice(7).trim()
+          try {
+            const principal = await verifyIdToken(token, { expectedAudience })
+            // eslint-disable-next-line require-atomic-updates
+            req.verifiedPrincipal = principal
+            next()
+          } catch (err) {
+            logger.warn(`${TAGS.MCP} ID-token verification failed: ${err.message}`)
+            res.status(401).json({ error: 'Bearer token verification failed' })
+          }
+        })
+      } else {
+        logger.warn(
+          `${TAGS.MCP} CEP_BEARER_AUDIENCE is not set.\n` +
+            `Inbound bearer tokens are forwarded to Google without local verification; bad tokens are rejected by Google rather than at this server's boundary.\n` +
+            `Set CEP_BEARER_AUDIENCE to the expected OAuth client ID to verify tokens locally and attribute requests to a verified principal.\n` +
+            `Setup: https://github.com/google/chrome-enterprise-premium-mcp/blob/main/docs/configuration.md#inbound-bearer-id-token-verification-http-mode`,
+        )
+      }
 
       app.post('/mcp', createMcpPostHandler(gcpInfo))
 
