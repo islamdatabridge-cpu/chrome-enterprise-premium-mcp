@@ -92,4 +92,37 @@ describe('getAuthClient OAuth-cache fallback', () => {
     const tok = await client.getAccessToken()
     assert.equal(tok.token, SYNTHETIC_TOKEN, 'returned cached token')
   })
+
+  test('When ADC throws and the cache file has mode 0644, then getAuthClient throws with a chmod hint', async t => {
+    if (process.platform === 'win32') {
+      return t.skip('mode bits are meaningless on Windows ACLs')
+    }
+    await fs.chmod(CACHE_PATH, 0o644)
+    try {
+      const { getAuthClient } = await esmock('../../lib/util/auth.js', {
+        'google-auth-library': {
+          GoogleAuth: class {
+            async getClient() {
+              throw new Error('SYNTHETIC: ADC unavailable')
+            }
+          },
+          OAuth2Client: class {
+            constructor() {
+              this._creds = null
+            }
+            setCredentials(c) {
+              this._creds = c
+            }
+          },
+        },
+      })
+
+      await assert.rejects(
+        () => getAuthClient(['https://www.googleapis.com/auth/userinfo.email'], undefined),
+        /loose permissions.*chmod 600/s,
+      )
+    } finally {
+      await fs.chmod(CACHE_PATH, 0o600).catch(() => {})
+    }
+  })
 })
