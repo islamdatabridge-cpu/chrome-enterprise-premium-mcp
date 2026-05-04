@@ -327,9 +327,44 @@ describe('check_and_enable_cep_api tool', () => {
 
     assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — ENABLING`))
     assert.ok(result.content[0].text.includes('enable requested, may take a few minutes'))
-    assert.ok(result.content[0].text.includes('operations/test-operation-123'))
+    assert.ok(result.content[0].text.includes('Re-run this tool to verify status.'))
+    assert.ok(
+      !result.content[0].text.includes('operations/test-operation-123'),
+      'opaque operation ID should not appear in the user-facing summary',
+    )
     const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
     assert.strictEqual(status.status, 'ENABLING')
     assert.strictEqual(status.operationName, 'operations/test-operation-123')
+  })
+
+  test('When enableService returns done:false with no operation name, then operationName is omitted from structuredContent', async () => {
+    const mockServiceUsageClient = {
+      getServiceStatus: mock.fn(async (projectId, api) => ({
+        name: `projects/${projectId}/services/${api}`,
+        state: 'DISABLED',
+      })),
+      enableService: mock.fn(async () => ({ done: false })),
+    }
+
+    const handler = await setupTool(mockServiceUsageClient)
+
+    const result = await handler(
+      {
+        projectId: 'test-project',
+        apiName: SERVICE_NAMES.ADMIN_SDK,
+        enable: true,
+        checkAll: false,
+      },
+      { requestInfo: {} },
+    )
+
+    assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — ENABLING`))
+    assert.ok(
+      !result.content[0].text.includes('unknown'),
+      'no "unknown" literal when upstream returned no operation name',
+    )
+    const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
+    assert.strictEqual(status.status, 'ENABLING')
+    assert.strictEqual(status.operationName, undefined)
   })
 })

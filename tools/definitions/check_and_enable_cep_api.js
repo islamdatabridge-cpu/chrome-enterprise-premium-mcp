@@ -92,11 +92,14 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
                   results.push(`- **${api}** — NEWLY_ENABLED (project: \`${projectId}\`)`)
                   apiStatuses.push({ apiName: api, status: 'ENABLED', projectId })
                 } else {
-                  const operationName = enableResponse && enableResponse.name ? enableResponse.name : 'unknown'
                   results.push(
-                    `- **${api}** — ENABLING (project: \`${projectId}\`): enable requested, may take a few minutes (operation: \`${operationName}\`)`,
+                    `- **${api}** — ENABLING (project: \`${projectId}\`): enable requested, may take a few minutes. Re-run this tool to verify status.`,
                   )
-                  apiStatuses.push({ apiName: api, status: 'ENABLING', projectId, operationName })
+                  const enablingStatus = { apiName: api, status: 'ENABLING', projectId }
+                  if (enableResponse && enableResponse.name) {
+                    enablingStatus.operationName = enableResponse.name
+                  }
+                  apiStatuses.push(enablingStatus)
                 }
               } else {
                 const consoleLink = `https://console.cloud.google.com/apis/library/${api}?project=${projectId}`
