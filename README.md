@@ -86,8 +86,12 @@ gcloud auth application-default set-quota-project YOUR_PROJECT_ID
 > delete `~/.config/gcloud/application_default_credentials.json` and re-run
 > the login command above.
 >
-> **The quota project is required.** Without it you'll see a "quota project
-> not set" error on the first API call.
+> **The quota project is required.** Without it, the first call returns a
+> "quota project not set" error from Google.
+
+> **Alternative to ADC:** run `mcp auth login` for an OAuth-flow setup.
+> Setup walkthrough at [`docs/auth-bring-your-own-oauth-client.md`](docs/auth-bring-your-own-oauth-client.md).
+> Auth-method matrix at [`docs/configuration.md#authenticating-to-google-apis`](docs/configuration.md#authenticating-to-google-apis).
 
 ### 2. Enable Required APIs
 

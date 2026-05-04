@@ -3,3 +3,4 @@ results.json
 results_final.json
 .claude/
 .gemini/
+.opencode/
