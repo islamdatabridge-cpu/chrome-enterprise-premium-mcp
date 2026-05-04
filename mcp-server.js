@@ -380,12 +380,7 @@ async function main() {
       // sessionState is correct. HTTP mode does not reach this branch and
       // does not see this object — its handlers create per-request state
       // via createSessionState() in createMcpPostHandler / createSseHandler.
-      const stdioSessionState = {
-        customerId: null,
-        cachedRootOrgUnitId: null,
-        pendingRule: null,
-        history: [],
-      }
+      const stdioSessionState = createSessionState()
       const stdioTransport = new StdioServerTransport()
       const server = await getServer(gcpInfo, stdioSessionState)
       await server.connect(stdioTransport)
