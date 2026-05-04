@@ -22,7 +22,7 @@ import { z } from 'zod'
 import { guardedToolCall, formatToolResponse, safeFormatResponse } from '../utils/wrapper.js'
 import { commonOutputSchemas } from './shared.js'
 import { CONNECTOR_KEY_MAPPING, POLICY_DISPLAY_NAMES } from '../../lib/constants.js'
-import { ConnectorPolicyFilter } from '../../lib/api/chromepolicy.js'
+import { ConnectorPolicyFilter } from '../../lib/api/real_chrome_policy_client.js'
 import { analyzeConnectorPolicy, humanize } from '../../lib/util/connector_policy_helper.js'
 
 /**
