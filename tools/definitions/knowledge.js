@@ -35,9 +35,56 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const DB_DIR = path.resolve(__dirname, '../../lib/knowledge')
 
+// Files in lib/knowledge that exist on disk but must not surface as
+// retrievable documents. README.md is project-internal documentation.
+// 0-agent-capabilities.md is the agent's own capabilities/boundaries
+// reference — it shapes the agent's behavior and is loaded into its
+// context, but exposing it via get_document or as an MCP resource picker
+// entry would let users browse/exfiltrate the agent's control surface.
+const NON_PUBLIC_KNOWLEDGE_FILES = new Set(['README.md', '0-agent-capabilities.md'])
+
 let cachedDb = null
 let isDbLoading = false
 let dbLoadingPromise = null
+
+/**
+ * Reads the knowledge directory once and returns one parsed entry per
+ * publishable markdown file. Used at registration time to populate the
+ * docSummaries index, the cached DB, and the MCP resource list from a
+ * single set of file reads.
+ * @param {string} dir Directory containing the markdown knowledge files.
+ * @returns {Array<{file: string, filename: string, filePath: string, metadata: object, content: string}>}
+ * One entry per `.md` file not in NON_PUBLIC_KNOWLEDGE_FILES, sorted by
+ * leading numeric prefix where present, otherwise by filename.
+ */
+function scanKnowledgeDir(dir) {
+  const entries = []
+  const files = fs.readdirSync(dir)
+  files.sort((a, b) => {
+    const numA = parseInt(a.split('-')[0])
+    const numB = parseInt(b.split('-')[0])
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return numA - numB
+    }
+    return a.localeCompare(b)
+  })
+  for (const file of files) {
+    if (!file.endsWith('.md') || NON_PUBLIC_KNOWLEDGE_FILES.has(file)) {
+      continue
+    }
+    const filePath = path.join(dir, file)
+    const fileContent = fs.readFileSync(filePath, 'utf-8')
+    const { data: metadata, content } = matter(fileContent)
+    entries.push({
+      file,
+      filename: file.replace(/\.md$/, ''),
+      filePath,
+      metadata,
+      content,
+    })
+  }
+  return entries
+}
 
 /**
  * Boilerplate phrases that frequently appear in devsite/help-center pages
@@ -98,35 +145,25 @@ export function registerKnowledgeTools(server, options, sessionState) {
   logger.debug(`${TAGS.MCP} Registering Knowledge tools...`)
 
   const dirToRead = options.dbPath || DB_DIR
-  const docSummaries = []
-  try {
-    const files = fs.readdirSync(dirToRead)
-    files.sort((a, b) => {
-      const numA = parseInt(a.split('-')[0])
-      const numB = parseInt(b.split('-')[0])
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB
-      }
-      return a.localeCompare(b)
-    })
-
-    files.forEach(file => {
-      if (file.endsWith('.md') && file !== 'README.md') {
-        const filePath = path.join(dirToRead, file)
-        const fileContent = fs.readFileSync(filePath, 'utf-8')
-        const { data: metadata } = matter(fileContent)
-        if (metadata.summary) {
-          docSummaries.push({
-            filename: file.replace('.md', ''),
-            summary: metadata.summary,
-            source: metadata.url ? 'Remote' : 'Local',
-          })
-        }
-      }
-    })
-  } catch (e) {
-    logger.error(`${TAGS.MCP} Failed to pre-scan knowledge for index:`, e)
+  // When tests pass options.allDocs, they're bypassing on-disk loading
+  // entirely; skip the scan so we don't read the real knowledge dir
+  // during isolated tests.
+  let scannedDocs = []
+  if (!options.allDocs) {
+    try {
+      scannedDocs = scanKnowledgeDir(dirToRead)
+    } catch (e) {
+      logger.error(`${TAGS.MCP} Failed to scan knowledge directory:`, e)
+    }
   }
+
+  const docSummaries = scannedDocs
+    .filter(d => d.metadata.summary)
+    .map(d => ({
+      filename: d.filename,
+      summary: d.metadata.summary,
+      source: d.metadata.url ? 'Remote' : 'Local',
+    }))
 
   const indexTable = docSummaries.map(s => `| **${s.filename}** | ${s.summary} | ${s.source} |`).join('\n')
 
@@ -163,29 +200,20 @@ ${indexTable}`
         const idToDoc = new Map()
         const allDocs = []
 
-        const dirToRead = options.dbPath || DB_DIR
-        const files = fs.readdirSync(dirToRead)
-        files.forEach(file => {
-          if (file.endsWith('.md')) {
-            const filePath = path.join(dirToRead, file)
-            const fileContent = fs.readFileSync(filePath, 'utf-8')
-            const { data: metadata, content } = matter(fileContent)
-
-            const doc = {
-              id: String(metadata.articleId || file),
-              filename: file.replace('.md', ''),
-              title: metadata.title || file.replace('.md', ''),
-              content: content,
-              articleId: metadata.articleId,
-              summary: metadata.summary,
-              url: metadata.url,
-            }
-
-            allDocs.push(doc)
-            docLookup.set(doc.filename, doc)
-            idToDoc.set(String(doc.id), doc)
+        for (const entry of scannedDocs) {
+          const doc = {
+            id: String(entry.metadata.articleId || entry.file),
+            filename: entry.filename,
+            title: entry.metadata.title || entry.filename,
+            content: entry.content,
+            articleId: entry.metadata.articleId,
+            summary: entry.metadata.summary,
+            url: entry.metadata.url,
           }
-        })
+          allDocs.push(doc)
+          docLookup.set(doc.filename, doc)
+          idToDoc.set(String(doc.id), doc)
+        }
 
         // Load Dynamic Documents (*.doc.js)
         const dynamicDocs = await loadDynamicDocs(dirToRead)
@@ -611,29 +639,20 @@ ${knowledgeIndex}`,
   if (typeof server.registerResource !== 'function') {
     return
   }
-  const knowledgeDir = options.dbPath || DB_DIR
-  try {
-    const files = fs
-      .readdirSync(knowledgeDir)
-      .filter(f => f.endsWith('.md') && f !== 'README.md' && f !== '0-agent-capabilities.md')
-    for (const file of files) {
-      const filename = file.replace('.md', '')
-      const uri = `cep://knowledge/${filename}`
-      const parsed = matter(fs.readFileSync(path.join(knowledgeDir, file), 'utf8'))
-      const summary = parsed.data?.summary || ''
-      const title = parsed.data?.title || filename
-      server.registerResource(filename, uri, { title, description: summary, mimeType: 'text/markdown' }, async () => {
-        const db = await loadDb()
-        const doc = db.docLookup.get(filename)
-        if (!doc) {
-          return { contents: [] }
-        }
-        return {
-          contents: [{ uri, mimeType: 'text/markdown', text: `## ${doc.title}\n\n${doc.content}` }],
-        }
-      })
-    }
-  } catch (e) {
-    logger.error(`${TAGS.MCP} Failed to register knowledge resources:`, e)
+  for (const entry of scannedDocs) {
+    const { filename } = entry
+    const uri = `cep://knowledge/${filename}`
+    const summary = entry.metadata?.summary || ''
+    const title = entry.metadata?.title || filename
+    server.registerResource(filename, uri, { title, description: summary, mimeType: 'text/markdown' }, async () => {
+      const db = await loadDb()
+      const doc = db.docLookup.get(filename)
+      if (!doc) {
+        return { contents: [] }
+      }
+      return {
+        contents: [{ uri, mimeType: 'text/markdown', text: `## ${doc.title}\n\n${doc.content}` }],
+      }
+    })
   }
 }
