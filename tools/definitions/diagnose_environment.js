@@ -28,7 +28,7 @@ import { z } from 'zod'
 import { guardedToolCall, formatToolResponse } from '../utils/wrapper.js'
 import { TAGS, CONNECTOR_DISPLAY_NAMES } from '../../lib/constants.js'
 import { logger } from '../../lib/util/logger.js'
-import { ConnectorPolicyFilter } from '../../lib/api/chromepolicy.js'
+import { ConnectorPolicyFilter } from '../../lib/api/real_chrome_policy_client.js'
 import { CHROME_ACTION_TYPES } from '../../lib/util/chrome_dlp_constants.js'
 import { analyzeConnectorPolicy } from '../../lib/util/connector_policy_helper.js'
 
