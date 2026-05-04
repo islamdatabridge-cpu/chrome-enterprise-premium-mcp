@@ -207,16 +207,18 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
 
               const summary = `Connector policy: ${title}\n${statusLine}${warningSection}`
 
+              const payload = {
+                connectorPolicies: cleanedPolicies,
+                connectorType: policy,
+                orgUnitId,
+                configured: isConfigured,
+                warnings: allWarnings,
+              }
+
               return formatToolResponse({
                 summary,
-                data: cleanedPolicies,
-                structuredContent: {
-                  connectorPolicies: cleanedPolicies,
-                  connectorType: policy,
-                  orgUnitId,
-                  configured: isConfigured,
-                  warnings: allWarnings,
-                },
+                data: payload,
+                structuredContent: payload,
               })
             },
           })
