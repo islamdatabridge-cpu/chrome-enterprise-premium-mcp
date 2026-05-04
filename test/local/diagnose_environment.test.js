@@ -85,7 +85,33 @@ describe('diagnose_environment', () => {
   describe('Summary Mode', () => {
     test('When environment is healthy, then it produces zero issues', async () => {
       const { handler } = registerAndGetHandler({
-        connectorPolicy: [{ value: { value: {} } }],
+        connectorPolicy: [
+          {
+            value: {
+              value: {
+                // Satisfies non-reporting connectors (Upload, Download, Paste, Print)
+                serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                delayDeliveryUntilVerdict: true,
+                // Satisfies URL check connector
+                realtimeUrlCheckEnabled: true,
+                // Satisfies Reporting connector
+                reportingConnector: {
+                  eventConfiguration: {
+                    enabledEventNames: [
+                      'contentTransferEvent',
+                      'unscannedFileEvent',
+                      'dangerousDownloadEvent',
+                      'sensitiveDataEvent',
+                      'interstitialEvent',
+                      'urlFilteringInterstitialEvent',
+                      'suspiciousUrlEvent',
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
         resolvePolicy: [
           {
             targetKey: { additionalTargetKeys: { app_id: 'chrome:ekajlcmdfcigmdbphhifahdfjbkciflj' } },
@@ -130,7 +156,7 @@ describe('diagnose_environment', () => {
       const { handler } = registerAndGetHandler({ connectorPolicy: [] })
       const result = await handler({ customerId: 'C0123' }, { requestInfo: {} })
       const connectorIssues = result.structuredContent.issues.filter(i => i.component.startsWith('connector.'))
-      assert.ok(connectorIssues.length === 6, `Expected 6 missing connectors, got ${connectorIssues.length}`)
+      assert.ok(connectorIssues.length === 6, `Expected 6 missing connector issues, got ${connectorIssues.length}`)
       assert.ok(connectorIssues.every(i => i.severity === 'critical'))
     })
 
