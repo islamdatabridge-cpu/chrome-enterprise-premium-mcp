@@ -398,6 +398,12 @@ export async function runServer() {
         // audience. Forged or missing bearers get 401 ahead of any handler.
         const audienceList = Array.isArray(expectedAudience) ? expectedAudience : [expectedAudience]
         logger.info(`${TAGS.MCP} Bearer ID-token verification is on; audience: ${audienceList.join(', ')}`)
+        // Rate limiting is intentionally delegated to the deployment platform
+        // (Cloud Run, Vertex AI Agent Engine, or a fronting reverse proxy).
+        // Application-level limiting here would duplicate platform policy with
+        // weaker client-IP attribution behind GCLB, and verifyIdToken caches
+        // JWKS so the per-bad-bearer cost is local crypto, not a network round
+        // trip. CodeQL: js/missing-rate-limiting (intentionally suppressed).
         app.use(async (req, res, next) => {
           const auth = req.headers.authorization
           if (!auth || !auth.toLowerCase().startsWith('bearer ')) {
