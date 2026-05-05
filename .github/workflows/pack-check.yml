@@ -1,0 +1,37 @@
+name: Tarball contents
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - '.github/expected-tarball.txt'
+      - 'mcp-server.js'
+      - 'tools/**'
+      - 'lib/**'
+      - 'prompts/**'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pack-check:
+    name: Verify npm pack contents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - name: Snapshot tarball file list
+        run: |
+          # LC_ALL=C forces a byte-wise sort so the snapshot matches across machines
+          # regardless of locale (BSD/GNU sort default to locale-aware ordering).
+          npm pack --dry-run --json | jq -r '.[0].files[].path' | LC_ALL=C sort > /tmp/actual-tarball.txt
+          if ! diff -u .github/expected-tarball.txt /tmp/actual-tarball.txt; then
+            echo
+            echo "::error::Tarball file list does not match the snapshot at .github/expected-tarball.txt."
+            echo "If the change is intentional (you added or removed a shippable file under mcp-server.js, tools/, lib/, or prompts/), regenerate the snapshot:"
+            echo "  npm pack --dry-run --json | jq -r '.[0].files[].path' | LC_ALL=C sort > .github/expected-tarball.txt"
+            echo "Commit the regenerated file alongside your change."
+            exit 1
+          fi

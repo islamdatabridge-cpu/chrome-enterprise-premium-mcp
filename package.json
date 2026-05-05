@@ -12,6 +12,13 @@
   "bin": {
     "chrome-enterprise-premium-mcp": "bin/cli.js"
   },
+  "files": [
+    "bin/",
+    "mcp-server.js",
+    "tools/",
+    "lib/",
+    "prompts/"
+  ],
   "scripts": {
     "eval": "CEP_BACKEND=fake node test/evals/run.js",
     "eval:agentic": "CEP_BACKEND=fake node test/evals/run.js --category inspection,troubleshooting,mutation,discovery,connectors",
