@@ -22,6 +22,7 @@ limitations under the License.
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { isTransient } from './transient.js'
 
 const MODEL_NAME = 'gemini-3.1-flash-lite-preview'
 
@@ -76,6 +77,11 @@ REASONING: <A single concise sentence explaining the verdict.>`
 
       return { passed: isPassed, reasoning }
     } catch (err) {
+      // Re-throw transient errors so the runner's retry wrapper can see them;
+      // non-transient errors stay swallowed as a judge FAIL with reasoning.
+      if (isTransient(err)) {
+        throw err
+      }
       return { passed: false, reasoning: `Judge error: ${err.message}` }
     }
   }
