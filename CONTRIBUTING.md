@@ -8,7 +8,7 @@ We'd love to accept your patches and contributions to this project.
 
 Contributions to this project must be accompanied by a
 [Contributor License Agreement](https://cla.developers.google.com/about) (CLA).
-You (or your employer) retain the copyright to your contribution; this simply
+You (or your employer) retain the copyright to your contribution; the CLA only
 gives us permission to use and redistribute your contributions as part of the
 project.
 
@@ -84,7 +84,7 @@ npm run format        # Auto-fix formatting (Prettier)
 
 `npm run presubmit` runs `prettier --check` and `eslint` in read-only mode;
 it will fail rather than auto-fix. The husky pre-commit hook fixes staged
-files via lint-staged on commit, so a clean working tree usually passes.
+files through lint-staged on commit, so a clean working tree usually passes.
 
 ### Continuous integration
 

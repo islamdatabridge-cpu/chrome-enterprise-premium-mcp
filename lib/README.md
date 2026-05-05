@@ -24,6 +24,6 @@ Shared infrastructure for the MCP server.
 - [`util/`](./util/): auth, retry/backoff, logging, CEL validation, feature
   flags, DLP constants, and other cross-cutting utilities.
 - [`knowledge/`](./knowledge/): markdown knowledge-base articles bundled with
-  the server and exposed via the `cep:expert` and search tools.
+  the server and exposed through the `cep:expert` prompt and the search tools.
 - `constants.js`: centralized OAuth scopes, API versions, and tag strings used
   across the codebase.
