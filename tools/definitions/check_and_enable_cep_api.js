@@ -88,18 +88,31 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
               } else if (enable) {
                 logger.info(`${TAGS.MCP} Enabling API [${api}] for project [${projectId}]...`)
                 const enableResponse = await serviceUsageClient.enableService(projectId, api, authToken)
-                if (enableResponse && enableResponse.done === true) {
+                // LRO error must short-circuit the done:true branch; a completed LRO can carry
+                // an error (billing, permissions, quota), and reporting it as success is worse
+                // than reporting it as still pending.
+                if (enableResponse?.error) {
+                  const errMessage = enableResponse.error.message || JSON.stringify(enableResponse.error)
+                  results.push(`- **${api}** — FAILED (project: \`${projectId}\`): ${errMessage}`)
+                  apiStatuses.push({ apiName: api, status: 'FAILED', projectId, error: errMessage })
+                } else if (enableResponse?.done === true) {
                   results.push(`- **${api}** — NEWLY_ENABLED (project: \`${projectId}\`)`)
                   apiStatuses.push({ apiName: api, status: 'ENABLED', projectId })
-                } else {
+                } else if (enableResponse?.done === false) {
                   results.push(
                     `- **${api}** — ENABLING (project: \`${projectId}\`): enable requested, may take a few minutes. Re-run this tool to verify status.`,
                   )
                   const enablingStatus = { apiName: api, status: 'ENABLING', projectId }
-                  if (enableResponse && enableResponse.name) {
+                  if (enableResponse?.name) {
                     enablingStatus.operationName = enableResponse.name
                   }
                   apiStatuses.push(enablingStatus)
+                } else {
+                  // Falling back to ENABLING here would loop forever; report UNKNOWN explicitly.
+                  results.push(
+                    `- **${api}** — UNKNOWN (project: \`${projectId}\`): unexpected response from Service Usage; re-run this tool to verify status.`,
+                  )
+                  apiStatuses.push({ apiName: api, status: 'UNKNOWN', projectId })
                 }
               } else {
                 const consoleLink = `https://console.cloud.google.com/apis/library/${api}?project=${projectId}`
