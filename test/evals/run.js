@@ -56,12 +56,17 @@ import { runChecks, checkForbidden, checkRequired } from './lib/assertions.js'
 import { createJudge } from './lib/judge.js'
 import { createEvalAgent } from './lib/agent.js'
 import { printConsole, writeResults } from './lib/reporter.js'
+import { withTransientRetry, Status, TransientSource } from './lib/transient.js'
 import { startFakeServer } from '../helpers/fake-api-server.js'
 import { applyScenario } from './scenarios/index.js'
 import { createIntegrationHarness, teardownIntegrationHarness } from '../helpers/integration/tools/harness.js'
 import { FeatureFlags } from '../../lib/util/feature_flags.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// If more than this share of runs end as TRANSIENT, mark the whole run
+// INCONCLUSIVE so downstream drift detection skips the comparison.
+const TRANSIENT_RUN_CEILING = 0.2
 
 /** CLI argument parsing */
 
@@ -144,8 +149,10 @@ async function main() {
         category: evalCase.category,
         prompt: evalCase.prompt,
         passed: deterministic.passed,
+        status: deterministic.passed ? Status.PASS : Status.FAIL,
+        transient: null,
         deterministic,
-        judge: { passed: true, reasoning: 'skipped (dry run)' },
+        judge: { passed: true, reasoning: 'dry-run skip', skipped: true },
         toolCalls: [],
         responseText: evalCase.goldenResponse,
         durationMs: 0,
@@ -243,33 +250,58 @@ async function main() {
 
       let responseText = ''
       let toolCalls = []
+      /** @type {{ source: string, message: string } | null} */
+      let transient = null
 
       try {
-        const result = await agent.query(promptText)
-        responseText = result.responseText
-        toolCalls = result.toolCalls
+        const agentOutcome = await withTransientRetry(() => agent.query(promptText))
+        if (agentOutcome.ok) {
+          responseText = agentOutcome.value.responseText
+          toolCalls = agentOutcome.value.toolCalls
+        } else {
+          transient = { source: TransientSource.AGENT, message: agentOutcome.error.message }
+        }
       } catch (err) {
         responseText = `Agent error: ${err.message}`
       }
 
       const actualToolNames = toolCalls.map(tc => tc.name)
-      const deterministic = runChecks(responseText, actualToolNames, evalCase)
+      const deterministic = transient
+        ? { passed: false, failures: [], skipped: true }
+        : runChecks(responseText, actualToolNames, evalCase)
 
       let judgeResult
-      if (judgeFn) {
+      if (transient) {
+        judgeResult = { passed: false, reasoning: 'judge skipped: agent transient', skipped: true }
+      } else if (judgeFn) {
         const rubric = evalCase.judgeInstructions || globalConfig.defaultJudgeRubric
-        judgeResult = await judgeFn({ responseText, goldenResponse: evalCase.goldenResponse, rubric })
+        const judgeOutcome = await withTransientRetry(() =>
+          judgeFn({ responseText, goldenResponse: evalCase.goldenResponse, rubric }),
+        )
+        if (judgeOutcome.ok) {
+          judgeResult = judgeOutcome.value
+        } else {
+          transient = { source: TransientSource.JUDGE, message: judgeOutcome.error.message }
+          judgeResult = { passed: false, reasoning: `judge transient: ${judgeOutcome.error.message}`, skipped: true }
+        }
       } else {
-        judgeResult = { passed: true, reasoning: 'skipped (--no-judge)' }
+        judgeResult = { passed: true, reasoning: '--no-judge', skipped: true }
       }
 
-      const passed = deterministic.passed && judgeResult.passed
+      const status = transient
+        ? Status.TRANSIENT
+        : deterministic.passed && judgeResult.passed
+          ? Status.PASS
+          : Status.FAIL
+      const passed = status === Status.PASS
 
       const result = {
         id: evalCase.id,
         category: evalCase.category,
         prompt: evalCase.prompt,
         passed,
+        status,
+        transient,
         deterministic,
         judge: judgeResult,
         toolCalls,
@@ -284,23 +316,24 @@ async function main() {
       const r = result
       const G = '\x1b[32m'
       const R = '\x1b[31m'
+      const Y = '\x1b[33m'
       const D = '\x1b[2m'
       const RST = '\x1b[0m'
-      const status = r.passed ? `${G}PASS${RST}` : `${R}FAIL${RST}`
+      const statusColor = r.status === Status.PASS ? G : r.status === Status.TRANSIENT ? Y : R
+      const statusLabel = `${statusColor}${r.status}${RST}`
       const title = r.prompt.length > 50 ? r.prompt.slice(0, 47) + '...' : r.prompt
       const sec = `${D}${(r.durationMs / 1000).toFixed(1)}s${RST}`
       const runStr = numRuns > 1 ? ` [Run ${run + 1}/${numRuns}]` : ''
-      console.log(`  ${r.id.padEnd(5)} ${status}  ${(title + runStr).padEnd(52)} ${sec}`)
-      if (!r.passed && r.deterministic.failures.length > 0) {
+      console.log(`  ${r.id.padEnd(5)} ${statusLabel}  ${(title + runStr).padEnd(52)} ${sec}`)
+      if (r.transient) {
+        console.log(`  ${' '.repeat(5)}       ${Y}${r.transient.source}: ${r.transient.message}${RST}`)
+      }
+      if (r.status === Status.FAIL && r.deterministic.failures.length > 0) {
         for (const f of r.deterministic.failures) {
           console.log(`  ${' '.repeat(5)}       ${R}${f}${RST}`)
         }
       }
-      if (
-        r.judge.reasoning &&
-        r.judge.reasoning !== 'skipped (--no-judge)' &&
-        r.judge.reasoning !== 'skipped (dry run)'
-      ) {
+      if (r.status !== Status.TRANSIENT && r.judge.reasoning && !r.judge.skipped) {
         console.log(`  ${' '.repeat(5)}       ${D}Judge: ${r.judge.reasoning}${RST}`)
       }
       if (verbose && r.toolCalls.length > 0) {
@@ -347,12 +380,14 @@ async function main() {
   // Sort results by ID for consistent output
   results.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
 
-  // Output — auto-enable verbose if there are failures
-  const hasFailures = results.some(r => !r.passed)
-  printConsole(results, { verbose: verbose || hasFailures })
+  // Output: auto-enable verbose if there are real failures (not transients)
+  const hasFailures = results.some(r => r.status === Status.FAIL)
+  const transientCount = results.filter(r => r.status === Status.TRANSIENT).length
+  const inconclusive = results.length > 0 && transientCount / results.length > TRANSIENT_RUN_CEILING
+  printConsole(results, { verbose: verbose || hasFailures, inconclusive })
 
   if (args.output) {
-    writeResults(results, args.output)
+    writeResults(results, args.output, { inconclusive })
 
     // Automatically generate AI failure summary for CI runs
     if (Array.isArray(priority) && priority.some(p => p === 'P0') && hasFailures) {
@@ -365,7 +400,7 @@ async function main() {
           baseUrl ? { baseUrl } : undefined,
         )
 
-        const failedResults = results.filter(r => !r.passed)
+        const failedResults = results.filter(r => r.status === Status.FAIL)
         const failureDetails = failedResults
           .map(
             r =>

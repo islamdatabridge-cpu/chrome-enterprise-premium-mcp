@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */ import fs from 'fs'
+import { Status } from './lib/transient.js'
 
 const data = JSON.parse(fs.readFileSync('results/stability-check.json', 'utf-8'))
 const flaky = data.evaluations.filter(e => !e.isStable)
@@ -23,7 +24,8 @@ const missingStrings = {}
 let judgeFailsOnly = 0
 
 for (const e of flaky) {
-  const failedRuns = e.runs.filter(r => !r.passed)
+  // Only true FAILs analyse here; TRANSIENT runs are infrastructure, not model output.
+  const failedRuns = e.runs.filter(r => r.status === Status.FAIL)
   for (const r of failedRuns) {
     if (r.deterministic.failures.length === 0 && !r.judge.passed) {
       judgeFailsOnly++

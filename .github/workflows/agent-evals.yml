@@ -1,0 +1,109 @@
+name: Agent Evals
+
+# No PR trigger in v1; cron + manual only. Revisit once drift detection has
+# enough clean signal to be trusted on the critical path.
+on:
+  schedule:
+    - cron: '0 11 * * *' # 11:00 UTC; off-peak for the Gemini API
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  evals:
+    name: 🤖 Agent evals
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CEP_BACKEND: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # The runner exits 1 on any FAIL. We let it; the diff step is what
+      # decides whether the workflow goes red, so the runner's own exit code
+      # must not abort the rest of the job.
+      - name: Run evals
+        continue-on-error: true
+        run: |
+          mkdir -p results
+          node test/evals/run.js --output results/eval-latest.json
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: results/
+          retention-days: 30
+
+      # Drift detection only runs once a baseline is checked in. Before then,
+      # the workflow just produces and uploads results.
+      - name: Diff vs baseline
+        id: diff
+        if: hashFiles('results/eval-baseline.json') != ''
+        run: |
+          set +e
+          node scripts/eval-diff.js results/eval-baseline.json results/eval-latest.json \
+            | tee diff-output.txt \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      # Open a single tracking issue (or update the existing one) when the
+      # diff reports a regression. INCONCLUSIVE runs exit 0 from the diff and
+      # therefore do not trigger this step.
+      - name: Open or update drift tracking issue
+        if: steps.diff.outputs.exit_code == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE='Eval drift detected'
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY_FILE=$(mktemp)
+          {
+            echo "The daily Agent Evals cron detected a pass-rate regression beyond the 5% threshold."
+            echo
+            echo "**Run:** [${{ github.run_id }}]($RUN_URL)"
+            echo "**Triggered by:** ${{ github.event_name }}"
+            echo
+            echo '```'
+            cat diff-output.txt
+            echo '```'
+            echo
+            echo "Download \`results/eval-latest.json\` from the run's artifacts for the full per-case detail."
+          } > "$BODY_FILE"
+
+          EXISTING=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --label auto:evals \
+            --search "\"$TITLE\" in:title" \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -n "$EXISTING" ]; then
+            echo "Updating existing issue #$EXISTING"
+            gh issue comment "$EXISTING" --repo "${{ github.repository }}" --body-file "$BODY_FILE"
+          else
+            echo "Opening new drift issue"
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "$TITLE" \
+              --label auto:evals \
+              --body-file "$BODY_FILE"
+          fi
+
+      - name: Fail on regression
+        if: steps.diff.outputs.exit_code == '1'
+        run: exit 1
