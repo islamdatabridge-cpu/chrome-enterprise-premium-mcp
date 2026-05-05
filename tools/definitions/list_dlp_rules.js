@@ -19,7 +19,8 @@ limitations under the License.
  */
 
 import { z } from 'zod'
-import { guardedToolCall, formatToolResponse, safeFormatResponse, formatStatus } from '../utils/wrapper.js'
+import { guardedToolCall, formatToolResponse, safeFormatResponse } from '../utils/wrapper.js'
+import { formatStatus } from '../../lib/util/helpers.js'
 import { commonOutputSchemas } from './shared.js'
 import { TAGS } from '../../lib/constants.js'
 import { logger } from '../../lib/util/logger.js'
@@ -117,6 +118,7 @@ export function registerListDlpRulesTool(server, options, sessionState) {
             },
           })
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,

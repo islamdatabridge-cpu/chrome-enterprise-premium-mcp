@@ -41,13 +41,18 @@ limitations under the License.
 import { config } from '@dotenvx/dotenvx'
 config({ quiet: true, ignore: ['MISSING_ENV_FILE'] })
 
+// Ensure the delete-tool experiment is on by default so evals that test the
+// agent's judgment (e.g. m03) exercise real production-with-experiment behavior.
+// The caller can still override by setting EXPERIMENT_DELETE_TOOL_ENABLED=false.
+process.env.EXPERIMENT_DELETE_TOOL_ENABLED ??= 'true'
+
 import { parseArgs } from 'node:util'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
 
 import { loadAllEvals, loadGlobalConfig } from './lib/loader.js'
-import { runChecks } from './lib/assertions.js'
+import { runChecks, checkForbidden, checkRequired } from './lib/assertions.js'
 import { createJudge } from './lib/judge.js'
 import { createEvalAgent } from './lib/agent.js'
 import { printConsole, writeResults } from './lib/reporter.js'
@@ -111,7 +116,7 @@ async function main() {
   const ids = (args.id || process.env.EVAL_IDS)?.split(',').map(t => t.trim())
   const priority = args.priority?.split(',').map(t => t.trim())
   const numRuns = parseInt(args.runs, 10) || 1
-  const concurrency = parseInt(args.concurrency, 10) || 10
+  const concurrency = parseInt(args.concurrency, 10) || 5
   const delayMs = parseInt(args.delay, 10) || 0
 
   // Load evals
@@ -126,7 +131,14 @@ async function main() {
   if (dryRun) {
     console.log(`Dry run: validating ${evals.length} eval(s) against their golden responses...\n`)
     const results = evals.map(evalCase => {
-      const deterministic = runChecks(evalCase.goldenResponse, evalCase.expectedTools, evalCase)
+      const forbidden = checkForbidden(evalCase.goldenResponse, evalCase.forbiddenPatterns)
+      const required = checkRequired(evalCase.goldenResponse, evalCase.requiredPatterns)
+      const failures = [...forbidden.failures, ...required.failures]
+      const deterministic = {
+        passed: failures.length === 0,
+        failures,
+        toolsSkipped: true,
+      }
       return {
         id: evalCase.id,
         category: evalCase.category,
@@ -134,7 +146,7 @@ async function main() {
         passed: deterministic.passed,
         deterministic,
         judge: { passed: true, reasoning: 'skipped (dry run)' },
-        toolCalls: evalCase.expectedTools.map(name => ({ name, args: {} })),
+        toolCalls: [],
         responseText: evalCase.goldenResponse,
         durationMs: 0,
       }
@@ -343,12 +355,15 @@ async function main() {
     writeResults(results, args.output)
 
     // Automatically generate AI failure summary for CI runs
-    if (args.priority && args.priority.includes('P0') && hasFailures) {
+    if (Array.isArray(priority) && priority.some(p => p === 'P0') && hasFailures) {
       console.log(`\nP0 tests failed. Generating AI summary for CI...`)
       try {
         const { GoogleGenerativeAI } = await import('@google/generative-ai')
         const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' }, baseUrl ? { baseUrl } : {})
+        const model = genAI.getGenerativeModel(
+          { model: 'gemini-3.1-flash-lite-preview' },
+          baseUrl ? { baseUrl } : undefined,
+        )
 
         const failedResults = results.filter(r => !r.passed)
         const failureDetails = failedResults

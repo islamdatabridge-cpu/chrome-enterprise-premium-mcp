@@ -113,6 +113,7 @@ Detectors are used within DLP rules to identify sensitive content. Use this to f
             },
           })
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,

@@ -23,16 +23,50 @@ logging, retry, GCP detection, CEL validation, and feature flags.
 
 **Auth**
 
-- `auth.js` — `getAuthClient()` returns an authenticated client using
-  Application Default Credentials (ADC), or wraps a supplied bearer when
-  one is passed. Also exports `ensureADCCredentials()`.
-- `auth-error.js` — Generates descriptive error messages for auth failures
-  (missing credentials, insufficient scopes, quota project not set). Detects
-  `gcloud` installation and suggests fix commands.
-- `google-auth-provider.js` — Production auth provider class. Wraps
+- `auth.js`: `getAuthClient(scopes, authToken)`. Three credential
+  sources, in priority order:
+  1. bearer header on the request,
+  2. Application Default Credentials,
+  3. cached OAuth token (fires only when ADC throws).
+
+  Also exports `ensureADCCredentials()`.
+
+- `auth-error.js`: error-message formatter for auth failures (missing
+  credentials, insufficient scopes, quota project not set). Includes
+  `gcloud`-installation detection and fix-command suggestions.
+
+- `auth_messages.js`: pure formatters for the startup banner. The
+  `CredentialProbe` typedef is the shared shape across credential
+  factories (ADC, OAuth-flow, bearer); `buildScopesField` consumes it.
+
+- `google-auth-provider.js`: production auth provider class. Wraps
   `getAuthClient` for use by real API clients.
-- `fake-auth-provider.js` — Test auth provider. Redirects requests to a local
-  mock server via `GOOGLE_API_ROOT_URL`.
+
+**Credential factories** (`credential/`)
+
+- `adc.js`: `adcCredential()`. Probe sequence: ADC, then tokeninfo,
+  then scope diff against the required set.
+
+- `oauth_flow.js`: `oauthFlowCredential()`. Managed-OAuth login flow
+  via `runLoginFlow()` (loopback callback or headless paste-back) and
+  a probe over the cached token. Default scopes: `OAUTH_SCOPES` (no
+  `cloud-platform`).
+
+- `token_cache.js`: `TokenCache`. Read-write access on a path-injected
+  file with mode 0600. Refresh tokens are stripped.
+
+- `loopback_server.js`: random-port `127.0.0.1` HTTP server for the
+  OAuth callback.
+
+- `oauth_client_config.js`: resolves OAuth client config (managed
+  bundled placeholder, BYO env vars, or future custom modes).
+
+- `cli_commands.js`: `runAuthStatusCommand` and `runLoginCommand` for
+  the `mcp auth-status` and `mcp auth login` CLI subcommands.
+
+- `jwt_verifier.js`: `verifyIdToken` plus `parseExpectedAudience`. Used
+  by `mcp-server.js` middleware in HTTP mode when `CEP_BEARER_AUDIENCE`
+  is set.
 
 **API plumbing**
 

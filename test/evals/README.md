@@ -87,7 +87,7 @@ what was configured in user-friendly terms.
 | Field                | Type     | Description                                                                                                          |
 | -------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
 | `id`                 | string   | Unique identifier (e.g., `k01`, `m01`, `t03`)                                                                        |
-| `category`           | string   | One of: `knowledge`, `inspection`, `troubleshooting`, `mutation`, `discovery`                                        |
+| `category`           | string   | One of: `knowledge`, `inspection`, `troubleshooting`, `mutation`, `discovery`, `connectors`                          |
 | `priority`           | string   | Classification: `P0` (launch blocking - must work), `P1` (agent must not get egregiously wrong), `P2` (nice to have) |
 | `tags`               | string[] | Freeform tags for filtering (e.g., `[dlp, create]`)                                                                  |
 | `expected_tools`     | string[] | Tools the agent should call. Validated deterministically.                                                            |
@@ -134,7 +134,9 @@ audit mode is silent"), use the judge instead.
 
 **Expected tool validation** checks that every tool listed in `expected_tools`
 was actually called by the agent. This catches a common failure mode: the agent
-_describes_ what it would do instead of actually doing it.
+_describes_ what it would do instead of actually doing it. Tool checks are
+skipped in `--dry-run` mode, since no agent runs and there are no actual tool
+calls to validate.
 
 ### Layer 2: LLM-as-judge (Gemini)
 
@@ -288,13 +290,14 @@ The runner accepts more flags (`--runs`, `--concurrency`, `--delay`,
 
 ### Environment variables
 
-| Variable         | Description                                                    | Default |
-| ---------------- | -------------------------------------------------------------- | ------- |
-| `GEMINI_API_KEY` | **Required.** Gemini API key for both the agent and the judge. | --      |
-| `CEP_BACKEND`    | `fake` (in-process mock) or `real` (live Google APIs).         | `fake`  |
-| `EVAL_CATEGORY`  | Alternative to `--category` flag.                              | --      |
-| `EVAL_IDS`       | Alternative to `--id` flag. Comma-separated.                   | --      |
-| `EVAL_TAGS`      | Alternative to `--tags` flag. Comma-separated.                 | --      |
+| Variable                         | Description                                                                                                                                       | Default |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `GEMINI_API_KEY`                 | **Required.** Gemini API key for both the agent and the judge.                                                                                    | --      |
+| `CEP_BACKEND`                    | `fake` (in-process mock) or `real` (live Google APIs).                                                                                            | `fake`  |
+| `EVAL_CATEGORY`                  | Alternative to `--category` flag.                                                                                                                 | --      |
+| `EVAL_IDS`                       | Alternative to `--id` flag. Comma-separated.                                                                                                      | --      |
+| `EVAL_TAGS`                      | Alternative to `--tags` flag. Comma-separated.                                                                                                    | --      |
+| `EXPERIMENT_DELETE_TOOL_ENABLED` | Registers the delete-tool experiment. The runner defaults this to `true` so cases like `m03` test real agent judgment. Set to `false` to disable. | `true`  |
 
 ### Output
 

@@ -306,10 +306,10 @@ describe('Admin SDK API', () => {
       const result = await handler({ userId: 'user@example.com' }, {})
 
       assert.strictEqual(mockCheckUserCepLicense.mock.callCount(), 1)
-      assert.match(result.content[0].text, /Error: API \[licensing.googleapis.com\] is not enabled/)
+      assert.match(result.content[0].text, /Error: API \[licensing\.googleapis\.com\] is not enabled/)
       assert.match(
         result.content[0].text,
-        /https:\/\/console.cloud.google.com\/apis\/library\/licensing.googleapis.com/,
+        /https:\/\/console\.cloud\.google\.com\/apis\/library\/licensing\.googleapis\.com/,
       )
     })
 

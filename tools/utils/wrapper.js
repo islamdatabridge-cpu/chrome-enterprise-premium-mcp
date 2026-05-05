@@ -23,21 +23,6 @@ import { logger } from '../../lib/util/logger.js'
 import { validateAndGetOrgUnitId } from './org-unit.js'
 
 /**
- * Formats a raw string (e.g., SNAKE_CASE status) to Title Case with spaces.
- * @param {string} s - The raw string
- * @returns {string} The formatted string
- */
-export function formatStatus(s) {
-  if (!s) {
-    return 'Unknown'
-  }
-  return String(s)
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, l => l.toUpperCase())
-}
-
-/**
  * Generates a proactive remediation message for authentication errors.
  * @param {number} status - The HTTP status code
  * @param {boolean} [isOAuth] - Whether the CLI is running in OAuth mode
@@ -54,17 +39,7 @@ function getAuthRemediationMessage(status, isOAuth = false) {
 2. **Verify APIs are enabled:** Ensure \`admin.googleapis.com\`, \`chromemanagement.googleapis.com\`, \`chromepolicy.googleapis.com\`, and \`cloudidentity.googleapis.com\` are enabled in your Google Cloud project.`
   }
 
-  const scopesList = [
-    SCOPES.CHROME_MANAGEMENT_POLICY,
-    SCOPES.CHROME_MANAGEMENT_REPORTS_READONLY,
-    SCOPES.CHROME_MANAGEMENT_PROFILES_READONLY,
-    SCOPES.ADMIN_REPORTS_AUDIT_READONLY,
-    SCOPES.ADMIN_DIRECTORY_ORGUNIT_READONLY,
-    SCOPES.ADMIN_DIRECTORY_CUSTOMER_READONLY,
-    SCOPES.LICENSING,
-    SCOPES.CLOUD_IDENTITY_POLICIES,
-    SCOPES.CLOUD_PLATFORM,
-  ]
+  const scopesList = Object.values(SCOPES)
 
   const bashScopes = scopesList.map(s => `  "${s}"`).join('\n')
   const bashCommand = `SCOPES=(\n${bashScopes}\n)\ngcloud auth application-default login --scopes=$(IFS=,; echo "\${SCOPES[*]}")`
@@ -213,6 +188,7 @@ export function guardedToolCall(
             }
           } catch (error) {
             logger.error(`${TAGS.MCP} Failed to auto-resolve customerId:`, error)
+            throw error
           }
         }
       }

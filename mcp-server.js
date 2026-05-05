@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /*
 Copyright 2026 Google LLC
 
@@ -33,7 +32,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { SetLevelRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import fs from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { GoogleAuth, OAuth2Client } from 'google-auth-library'
 
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'))
@@ -46,6 +45,7 @@ import { featureFlags, FLAGS } from './lib/util/feature_flags.js'
 import { logger } from './lib/util/logger.js'
 import { printBanner, dim } from './lib/util/banner.js'
 import { buildScopesField, buildAuthRemediationLines, buildQuotaProjectWarning } from './lib/util/auth_messages.js'
+import { verifyIdToken, parseExpectedAudience } from './lib/util/credential/jwt_verifier.js'
 import { TAGS, SCOPES } from './lib/constants.js'
 
 // Import Real Clients
@@ -160,12 +160,100 @@ async function probeADC(requiredScopes) {
 }
 
 /**
+ * Builds a fresh per-request session-state object. Each HTTP request must call
+ * this so that resolved customerId / orgUnit data from one Workspace tenant
+ * cannot bleed into a concurrent request from another.
+ * @returns {{customerId: null, cachedRootOrgUnitId: null, pendingRule: null, history: Array}} A new session-state object with all fields zeroed.
+ */
+export function createSessionState() {
+  return { customerId: null, cachedRootOrgUnitId: null, pendingRule: null, history: [] }
+}
+
+/**
+ * Builds the Express handler for POST /mcp. Each invocation constructs a fresh
+ * per-request sessionState via createSessionState() and passes it to getServer,
+ * so concurrent requests cannot share customerId/orgUnit cache.
+ * @param {object} gcpInfo - GCP environment metadata.
+ * @param {(gcpInfo: object, sessionState: object) => Promise<object>} [getServerImpl] - Override for tests.
+ * @returns {(req: import('express').Request, res: import('express').Response) => Promise<void>} The Express request handler.
+ */
+export function createMcpPostHandler(gcpInfo, getServerImpl = getServer) {
+  return async (req, res) => {
+    const sessionState = createSessionState()
+    const server = await getServerImpl(gcpInfo, sessionState)
+    try {
+      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+      await server.connect(transport)
+      await transport.handleRequest(req, res, req.body)
+      res.on('close', () => {
+        logger.info(`${TAGS.MCP} Request closed`)
+        transport.close()
+        server.close()
+      })
+    } catch (error) {
+      logger.error(`${TAGS.MCP} Error handling MCP request:`, error)
+      if (!res.headersSent) {
+        const status = error.status || 500
+        res.status(status).json({
+          jsonrpc: '2.0',
+          error: {
+            code: status === 401 ? -32001 : -32603,
+            message: error.message || 'Internal server error',
+          },
+          id: null,
+        })
+      }
+    }
+  }
+}
+
+/**
+ * Builds the Express handler for GET /sse. Each new SSE connection constructs
+ * a fresh per-session sessionState; subsequent /messages POSTs route through
+ * the registered transport, which holds a reference to that same server.
+ * @param {object} gcpInfo - GCP environment metadata.
+ * @param {Record<string, SSEServerTransport>} sseTransports - Map of sessionId -> transport.
+ * @param {(gcpInfo: object, sessionState: object) => Promise<object>} [getServerImpl] - Override for tests.
+ * @returns {(req: import('express').Request, res: import('express').Response) => Promise<void>} The Express request handler.
+ */
+export function createSseHandler(gcpInfo, sseTransports, getServerImpl = getServer) {
+  return async (_req, res) => {
+    logger.info(`${TAGS.MCP} /sse Received request`)
+    try {
+      const sessionState = createSessionState()
+      const server = await getServerImpl(gcpInfo, sessionState)
+      const transport = new SSEServerTransport('/messages', res)
+      sseTransports[transport.sessionId] = transport
+      res.on('close', () => {
+        delete sseTransports[transport.sessionId]
+        try {
+          transport.close()
+        } catch (e) {
+          logger.error(`${TAGS.MCP} Error closing SSE transport:`, e)
+        }
+        try {
+          server.close()
+        } catch (e) {
+          logger.error(`${TAGS.MCP} Error closing SSE server:`, e)
+        }
+      })
+      await server.connect(transport)
+    } catch (error) {
+      logger.error(`${TAGS.MCP} Error handling SSE request:`, error)
+      if (!res.headersSent) {
+        res.status(500).send(error.message || 'Internal server error')
+      }
+    }
+  }
+}
+
+/**
  * Initializes and configures the MCP server instance.
  * @param {object} gcpInfo - The detected GCP environment metadata
  * @param {object} sharedSessionState - The shared session state for cross-request persistence
  * @returns {Promise<McpServer>} The configured MCP server instance
  */
-async function getServer(gcpInfo, sharedSessionState) {
+export async function getServer(gcpInfo, sharedSessionState) {
   const server = new McpServer(
     {
       name: 'chrome-enterprise-premium',
@@ -188,27 +276,20 @@ async function getServer(gcpInfo, sharedSessionState) {
   })
 
   const apiOptions = {}
-  let apiClients = {}
 
   if (process.env.GOOGLE_API_ROOT_URL) {
     apiOptions.rootUrl = process.env.GOOGLE_API_ROOT_URL
     logger.info(`${TAGS.MCP} TEST MODE: Real API clients redirected to ${apiOptions.rootUrl}`)
-    apiClients = {
-      adminSdk: new RealAdminSdkClient(apiOptions),
-      cloudIdentity: new RealCloudIdentityClient(apiOptions),
-      chromePolicy: new RealChromePolicyClient(apiOptions),
-      chromeManagement: new RealChromeManagementClient(apiOptions),
-      serviceUsage: new RealServiceUsageClient(apiOptions),
-    }
   } else {
     logger.info(`${TAGS.MCP} Using REAL API clients.`)
-    apiClients = {
-      adminSdk: new RealAdminSdkClient(apiOptions),
-      cloudIdentity: new RealCloudIdentityClient(apiOptions),
-      chromePolicy: new RealChromePolicyClient(apiOptions),
-      chromeManagement: new RealChromeManagementClient(apiOptions),
-      serviceUsage: new RealServiceUsageClient(apiOptions),
-    }
+  }
+
+  const apiClients = {
+    adminSdk: new RealAdminSdkClient(apiOptions),
+    cloudIdentity: new RealCloudIdentityClient(apiOptions),
+    chromePolicy: new RealChromePolicyClient(apiOptions),
+    chromeManagement: new RealChromeManagementClient(apiOptions),
+    serviceUsage: new RealServiceUsageClient(apiOptions),
   }
 
   const toolOptions = {
@@ -231,8 +312,9 @@ async function getServer(gcpInfo, sharedSessionState) {
 
 /**
  * Starts the MCP server.
+ * @returns {Promise<void>} Resolves when the server is shut down.
  */
-async function main() {
+export async function runServer() {
   try {
     const gcpInfo = await checkGCP()
     const isStdio = shouldStartStdio(gcpInfo)
@@ -294,17 +376,14 @@ async function main() {
     }
     console.log(dim(`Active Experiments: ${activeExps}`))
 
-    // Maintain session state globally for all server connections
-    const sharedSessionState = {
-      customerId: null,
-      cachedRootOrgUnitId: null,
-      pendingRule: null,
-      history: [],
-    }
-
     if (isStdio) {
+      // Stdio is single-process and single-tenant, so a process-lifetime
+      // sessionState is correct. HTTP mode does not reach this branch and
+      // does not see this object — its handlers create per-request state
+      // via createSessionState() in createMcpPostHandler / createSseHandler.
+      const stdioSessionState = createSessionState()
       const stdioTransport = new StdioServerTransport()
-      const server = await getServer(gcpInfo, sharedSessionState)
+      const server = await getServer(gcpInfo, stdioSessionState)
       await server.connect(stdioTransport)
       logger.info(`${TAGS.MCP} Chrome Enterprise Premium MCP server stdio transport connected`)
     } else {
@@ -312,32 +391,46 @@ async function main() {
       const app = express()
       app.use(express.json())
 
-      app.post('/mcp', async (req, res) => {
-        const server = await getServer(gcpInfo, sharedSessionState)
-        try {
-          const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-          await server.connect(transport)
-          await transport.handleRequest(req, res, req.body)
-          res.on('close', () => {
-            logger.info(`${TAGS.MCP} Request closed`)
-            transport.close()
-            server.close()
-          })
-        } catch (error) {
-          logger.error(`${TAGS.MCP} Error handling MCP request:`, error)
-          if (!res.headersSent) {
-            const status = error.status || 500
-            res.status(status).json({
-              jsonrpc: '2.0',
-              error: {
-                code: status === 401 ? -32001 : -32603,
-                message: error.message || 'Internal server error',
-              },
-              id: null,
-            })
+      const expectedAudience = parseExpectedAudience(process.env.CEP_BEARER_AUDIENCE)
+      if (expectedAudience) {
+        // Trust-boundary middleware: every /mcp, /sse, /messages request must
+        // carry a Google-signed ID token whose `aud` matches the expected
+        // audience. Forged or missing bearers get 401 ahead of any handler.
+        const audienceList = Array.isArray(expectedAudience) ? expectedAudience : [expectedAudience]
+        logger.info(`${TAGS.MCP} Bearer ID-token verification is on; audience: ${audienceList.join(', ')}`)
+        // Rate limiting is intentionally delegated to the deployment platform
+        // (Cloud Run, Vertex AI Agent Engine, or a fronting reverse proxy).
+        // Application-level limiting here would duplicate platform policy with
+        // weaker client-IP attribution behind GCLB, and verifyIdToken caches
+        // JWKS so the per-bad-bearer cost is local crypto, not a network round
+        // trip. CodeQL: js/missing-rate-limiting (intentionally suppressed).
+        app.use(async (req, res, next) => {
+          const auth = req.headers.authorization
+          if (!auth || !auth.toLowerCase().startsWith('bearer ')) {
+            res.status(401).json({ error: 'Bearer token required' })
+            return
           }
-        }
-      })
+          const token = auth.slice(7).trim()
+          try {
+            const principal = await verifyIdToken(token, { expectedAudience })
+            // eslint-disable-next-line require-atomic-updates
+            req.verifiedPrincipal = principal
+            next()
+          } catch (err) {
+            logger.warn(`${TAGS.MCP} ID-token verification failed: ${err.message}`)
+            res.status(401).json({ error: 'Bearer token verification failed' })
+          }
+        })
+      } else {
+        logger.warn(
+          `${TAGS.MCP} CEP_BEARER_AUDIENCE is not set.\n` +
+            `Inbound bearer tokens are forwarded to Google without local verification; bad tokens are rejected by Google rather than at this server's boundary.\n` +
+            `Set CEP_BEARER_AUDIENCE to the expected OAuth client ID to verify tokens locally and attribute requests to a verified principal.\n` +
+            `Setup: https://github.com/google/chrome-enterprise-premium-mcp/blob/main/docs/configuration.md#inbound-bearer-id-token-verification-http-mode`,
+        )
+      }
+
+      app.post('/mcp', createMcpPostHandler(gcpInfo))
 
       app.get('/mcp', async (_req, res) => {
         logger.info(`${TAGS.MCP} Received GET MCP request`)
@@ -352,16 +445,7 @@ async function main() {
 
       const sseTransports = {}
 
-      app.get('/sse', async (_req, res) => {
-        logger.info(`${TAGS.MCP} /sse Received request`)
-        const server = await getServer(gcpInfo, sharedSessionState)
-        const transport = new SSEServerTransport('/messages', res)
-        sseTransports[transport.sessionId] = transport
-        res.on('close', () => {
-          delete sseTransports[transport.sessionId]
-        })
-        await server.connect(transport)
-      })
+      app.get('/sse', createSseHandler(gcpInfo, sseTransports))
 
       app.post('/messages', async (req, res) => {
         logger.info(`${TAGS.MCP} /messages Received request`)
@@ -370,13 +454,19 @@ async function main() {
         if (transport) {
           await transport.handlePostMessage(req, res, req.body)
         } else {
-          res.status(400).send('No transport found for sessionId')
+          // Log the unknown sessionId server-side so an operator can correlate
+          // the failure with their /sse stream. We deliberately do not echo it
+          // back: that would reflect a user-controlled query string into the
+          // response body and trip the reflected-XSS detector regardless of
+          // the response content type.
+          logger.warn(`${TAGS.MCP} /messages: no transport found for sessionId: ${String(sessionId)}`)
+          res.status(400).send('No transport found for the provided sessionId')
         }
       })
 
       const PORT = process.env.PORT || 0
-      const server = app.listen(PORT, () => {
-        const address = server.address()
+      const httpServer = app.listen(PORT, () => {
+        const address = httpServer.address()
         if (address) {
           const assignedPort = address.port
           // Use console.log directly so smoke tests waiting for this line
@@ -384,7 +474,7 @@ async function main() {
           console.log(`${TAGS.MCP} Chrome Enterprise Premium MCP server listening on port ${assignedPort}`)
         }
       })
-      server.on('error', e => {
+      httpServer.on('error', e => {
         if (e.code === 'EADDRINUSE') {
           logger.error(`${TAGS.MCP} Fatal error: Port ${PORT} is already in use.`)
           // eslint-disable-next-line n/no-process-exit
@@ -399,10 +489,17 @@ async function main() {
   }
 }
 
-process.on('SIGINT', async () => {
+const shutdown = async () => {
   logger.error(`${TAGS.MCP} Shutting down server...`)
   // eslint-disable-next-line n/no-process-exit
   process.exit(0)
-})
+}
 
-main()
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)
+
+// Only auto-start when invoked directly; tests and bin/cli.js import this
+// module without triggering the server.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runServer()
+}

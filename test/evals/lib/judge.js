@@ -67,7 +67,7 @@ REASONING: <A single concise sentence explaining the verdict.>`
       const result = await model.generateContent(prompt)
       const text = result.response.text()
 
-      const isPassed = text.toUpperCase().includes('RESULT: PASS')
+      const isPassed = /^\s*RESULT:\s*PASS\b/im.test(text)
       let reasoning = text
       const reasoningMatch = text.match(/REASONING:\s*(.+)/i)
       if (reasoningMatch) {
@@ -88,3 +88,16 @@ REASONING: <A single concise sentence explaining the verdict.>`
  * @param {{ responseText: string, goldenResponse: string, rubric: string }} opts
  * @returns {Promise<{ passed: boolean, reasoning: string }>}
  */
+
+/**
+ * Parses a judge response string and returns whether it represents a PASS.
+ *
+ * Matches `RESULT: PASS` only when it begins a line (with optional leading
+ * whitespace) and `PASS` is a complete word — mid-sentence mentions do not
+ * match.
+ * @param {string} text - Raw judge response text.
+ * @returns {boolean}
+ */
+export function parseJudgeResult(text) {
+  return /^\s*RESULT:\s*PASS\b/im.test(text)
+}

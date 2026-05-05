@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 /**
- * @file Runs the full test suite: unit tests + smoke tests.
+ * @file Runs the full test suite: unit tests + integration tests + smoke tests.
  *
  * Usage: node test/run-all.js
  *
@@ -33,6 +33,15 @@ const root = resolve(__dirname, '..')
 
 const suites = [
   { name: 'UNIT TESTS', cmd: 'node test/run-unit.js' },
+  {
+    name: 'INTEGRATION TESTS',
+    cmd: 'node test/run-integration.js fake',
+    env: {
+      CEP_LOG_LEVEL: 'SILENT',
+      SKIP_SLOW: 'true',
+      EXPERIMENT_DELETE_TOOL_ENABLED: 'true',
+    },
+  },
   { name: 'SMOKE TESTS', cmd: 'node test/local/smoke-test.js', env: { GCP_STDIO: 'false' } },
 ]
 

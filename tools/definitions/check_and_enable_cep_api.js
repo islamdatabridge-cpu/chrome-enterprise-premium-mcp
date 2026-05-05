@@ -118,18 +118,14 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
                 errorMessage.includes('PERMISSION_DENIED') ||
                 errorMessage.includes('invalid_grant')
 
-              if (
-                isAuthError &&
-                !errorMessage.includes('serviceusage.googleapis.com') &&
-                !errorMessage.includes('Service Usage API')
-              ) {
+              const mentionsServiceUsage =
+                errorMessage.includes('Service Usage API') || /\bserviceusage\.googleapis\.com\b/.test(errorMessage)
+
+              if (isAuthError && !mentionsServiceUsage) {
                 throw error
               }
 
-              const isServiceUsageError =
-                error.status === 403 ||
-                errorMessage.includes('serviceusage.googleapis.com') ||
-                errorMessage.includes('Service Usage API')
+              const isServiceUsageError = error.status === 403 || mentionsServiceUsage
 
               if (isServiceUsageError) {
                 serviceUsageDisabled = true
@@ -172,6 +168,7 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
             structuredContent: { apiStatuses },
           })
         },
+        skipAutoResolve: true,
       },
       options,
       sessionState,

@@ -19,7 +19,7 @@ limitations under the License.
  */
 
 import { z } from 'zod'
-import { guardedToolCall, formatToolResponse } from '../utils/wrapper.js'
+import { guardedToolCall, formatToolResponse, safeFormatResponse } from '../utils/wrapper.js'
 import { commonOutputSchemas } from './shared.js'
 import { TAGS } from '../../lib/constants.js'
 import { logger } from '../../lib/util/logger.js'
@@ -64,55 +64,51 @@ These profiles represent managed browser instances and provide details like OS v
          */
         handler: async ({ customerId }, { _requestInfo, authToken }) => {
           logger.debug(`${TAGS.MCP} Calling 'list_customer_profiles' with customerId: ${customerId}`)
-          try {
-            const profiles = await chromeManagementClient.listCustomerProfiles(customerId, authToken)
+          const profiles = await chromeManagementClient.listCustomerProfiles(customerId, authToken)
 
-            if (!profiles || profiles.length === 0) {
-              logger.debug(`${TAGS.MCP} No profiles found.`)
-              const sc = { profiles: [], totalCount: 0 }
+          return safeFormatResponse({
+            rawData: profiles,
+            toolName: 'list_customer_profiles',
+            formatFn: data => {
+              if (!data || data.length === 0) {
+                logger.debug(`${TAGS.MCP} No profiles found.`)
+                const sc = { profiles: [], totalCount: 0 }
+                return formatToolResponse({
+                  summary: `No profiles found for customer ${customerId}.`,
+                  data: sc,
+                  structuredContent: sc,
+                })
+              }
+
+              const formattedProfiles = data
+                .map(profile => {
+                  const displayName = profile.displayName || 'Unnamed Profile'
+                  const id =
+                    profile.profileId || profile.profilePermanentId || profile.name?.split('/').pop() || 'Unknown'
+                  const email = profile.userEmail || 'Unknown'
+                  const os = profile.osPlatformType ? `${profile.osPlatformType} ${profile.osVersion || ''}` : 'Unknown'
+                  return `- **${displayName}** — Email: ${email}, OS: ${os}, Profile: \`${id}\``
+                })
+                .join('\n')
+
+              const resourceMap = data
+                .map(profile => {
+                  const displayName = profile.displayName || 'Unnamed Profile'
+                  return `- "${displayName}" → \`${profile.name}\``
+                })
+                .join('\n')
+
+              logger.debug(`${TAGS.MCP} Successfully listed customer profiles.`)
+              const text = `## Browser Profiles (${data.length})\n\n${formattedProfiles}\n\nResource names for API operations:\n${resourceMap}`
+
+              const sc = { profiles: data, totalCount: data.length }
               return formatToolResponse({
-                summary: `No profiles found for customer ${customerId}.`,
+                summary: text,
                 data: sc,
                 structuredContent: sc,
               })
-            }
-
-            const formattedProfiles = profiles
-              .map(profile => {
-                const displayName = profile.displayName || 'Unnamed Profile'
-                const id =
-                  profile.profileId || profile.profilePermanentId || profile.name?.split('/').pop() || 'Unknown'
-                const email = profile.userEmail || 'Unknown'
-                const os = profile.osPlatformType ? `${profile.osPlatformType} ${profile.osVersion || ''}` : 'Unknown'
-                return `- **${displayName}** — Email: ${email}, OS: ${os}, Profile: \`${id}\``
-              })
-              .join('\n')
-
-            const resourceMap = profiles
-              .map(profile => {
-                const displayName = profile.displayName || 'Unnamed Profile'
-                return `- "${displayName}" → \`${profile.name}\``
-              })
-              .join('\n')
-
-            logger.debug(`${TAGS.MCP} Successfully listed customer profiles.`)
-            const text = `## Browser Profiles (${profiles.length})\n\n${formattedProfiles}\n\nResource names for API operations:\n${resourceMap}`
-
-            const sc = { profiles, totalCount: profiles.length }
-            return formatToolResponse({
-              summary: text,
-              data: sc,
-              structuredContent: sc,
-            })
-          } catch (error) {
-            logger.error(`${TAGS.MCP} Error listing customer profiles: ${error.message}`)
-            const sc = { profiles: [], totalCount: 0, error: true, message: error.message }
-            return formatToolResponse({
-              summary: `Error listing customer profiles: ${error.message}`,
-              data: sc,
-              structuredContent: sc,
-            })
-          }
+            },
+          })
         },
       },
       options,

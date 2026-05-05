@@ -45,10 +45,7 @@ export function registerCheckSebExtensionStatusTool(server, options, sessionStat
 The SEB extension is REQUIRED for advanced Chrome Enterprise Premium features like data masking. If not installed, use 'install_seb_extension' to fix it.`,
       inputSchema: {
         customerId: z.string().optional().describe('The Chrome customer ID (e.g. C012345).'),
-        orgUnitId: z
-          .string()
-          .describe('The ID of the organizational unit.')
-          .describe('The ID of the organizational unit to check.'),
+        orgUnitId: z.string().describe('The ID of the organizational unit to check.'),
       },
       outputSchema: z
         .object({

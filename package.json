@@ -10,13 +10,16 @@
   "type": "module",
   "main": "mcp-server.js",
   "bin": {
-    "chrome-enterprise-premium-mcp": "mcp-server.js"
+    "chrome-enterprise-premium-mcp": "bin/cli.js"
   },
   "scripts": {
     "eval": "CEP_BACKEND=fake node test/evals/run.js",
-    "eval:agentic": "CEP_BACKEND=fake node test/evals/run.js --category inspection,troubleshooting,mutation,discovery",
+    "eval:agentic": "CEP_BACKEND=fake node test/evals/run.js --category inspection,troubleshooting,mutation,discovery,connectors",
+    "eval:boundary": "CEP_BACKEND=fake node test/evals/run.js --category boundary",
     "eval:full": "CEP_BACKEND=fake node test/evals/run.js --runs 3 --output results/eval-full.md",
     "eval:knowledge": "CEP_BACKEND=fake node test/evals/run.js --category knowledge",
+    "eval:licensing": "CEP_BACKEND=fake node test/evals/run.js --category licensing",
+    "eval:prompt": "CEP_BACKEND=fake node test/evals/run.js --category prompt",
     "format": "prettier --write .",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
@@ -39,6 +42,7 @@
     "@dotenvx/dotenvx": "^1.52.0",
     "@modelcontextprotocol/sdk": "^1.11.0",
     "axios": "^1.7.2",
+    "cheerio": "^1.2.0",
     "express": "^5.1.0",
     "google-auth-library": "^10.4.0",
     "googleapis": "^166.0.0",

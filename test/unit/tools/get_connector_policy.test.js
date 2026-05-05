@@ -95,7 +95,8 @@ describe('get_connector_policy tool handler', () => {
     const dataText = result.content[1].text
 
     // Verify accurate status reporting
-    assert.match(summary, /^Connector policy: Real-Time URL Check \(OU: `OU123`\)\nStatus: Not configured$/)
+    assert.match(summary, /^Connector policy: Real-Time URL Check \(OU: `OU123`\)\nStatus: Not configured/)
+    assert.ok(summary.includes('Real-time URL check is explicitly disabled'))
 
     // Verify JSON details
     assert.match(dataText, /"isEnabled": false/)
@@ -646,10 +647,183 @@ describe('get_connector_policy tool handler', () => {
       { customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_SECURITY_EVENT' },
       { requestInfo: {} },
     )
+    const summary = result.content[0].text
     const dataText = result.content[1].text
 
+    assert.match(summary, /⚠️ WARNINGS:/)
+    assert.match(summary, /Missing core DLP events/)
     assert.match(dataText, /explicitlyEmptyEventNames/)
     assert.match(dataText, /Yes/)
+  })
+
+  test('When customized selection includes all 7 core events for ON_SECURITY_EVENT, then it reports Configured without warnings', async () => {
+    const coreEvents = [
+      'contentTransferEvent',
+      'unscannedFileEvent',
+      'dangerousDownloadEvent',
+      'sensitiveDataEvent',
+      'interstitialEvent',
+      'urlFilteringInterstitialEvent',
+      'suspiciousUrlEvent',
+    ]
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              reportingConnector: {
+                setting: {
+                  eventConfiguration: {
+                    enabledEventNames: coreEvents,
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler(
+      { customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_SECURITY_EVENT' },
+      { requestInfo: {} },
+    )
+    const summary = result.content[0].text
+
+    assert.match(summary, /Status: Configured/)
+    assert.doesNotMatch(summary, /⚠️ WARNINGS:/)
+  })
+
+  test('When ON_SECURITY_EVENT has default core events and additional opt-in events, then it reports Configured without warnings', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              reportingConnector: {
+                setting: {
+                  eventConfiguration: {
+                    enabledEventNames: [], // Default means core events are on
+                    optInEvents: [
+                      {
+                        name: 'loginEvent',
+                        urlPatterns: ['*'],
+                        enabled: true,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler(
+      { customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_SECURITY_EVENT' },
+      { requestInfo: {} },
+    )
+    const summary = result.content[0].text
+
+    assert.match(summary, /Status: Configured/)
+    assert.doesNotMatch(summary, /⚠️ WARNINGS:/)
+  })
+
+  test('When some core events are missing from customized configuration for ON_SECURITY_EVENT, then it warns with missing event list', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              reportingConnector: {
+                setting: {
+                  eventConfiguration: {
+                    enabledEventNames: ['contentTransferEvent'],
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler(
+      { customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_SECURITY_EVENT' },
+      { requestInfo: {} },
+    )
+    const summary = result.content[0].text
+
+    assert.match(summary, /⚠️ WARNINGS:/)
+    assert.match(summary, /Missing core DLP events/)
+    assert.match(summary, /Content unscanned, Malware transfer, Sensitive data transfer/)
+  })
+
+  test('When ON_FILE_ATTACHED has both Malware and Sensitive restricted (Allowlists), then it reports both warnings', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+              delayDeliveryUntilVerdict: true,
+              malwareUrlPatterns: {
+                onByDefault: true,
+                urlPatterns: ['malware-trust.com'],
+              },
+              sensitiveUrlPatterns: {
+                onByDefault: true,
+                urlPatterns: ['sensitive-trust.com'],
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler(
+      { customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_FILE_ATTACHED' },
+      { requestInfo: {} },
+    )
+    const summary = result.content[0].text
+
+    assert.match(summary, /⚠️ Malware Analysis is restricted. Scanning is DISABLED for specific URL patterns/)
+    assert.match(summary, /⚠️ Sensitive Analysis is restricted. Scanning is DISABLED for specific URL patterns/)
+  })
+
+  test('When Real-time URL check is specifically disabled, then it reports Not Configured', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              realtimeUrlCheckEnabled: 'REALTIME_URL_CHECK_MODE_ENUM_DISABLED',
+            },
+          },
+        },
+      ],
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler(
+      { customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_REALTIME_URL_NAVIGATION' },
+      { requestInfo: {} },
+    )
+    const summary = result.content[0].text
+    const dataText = result.content[1].text
+
+    assert.match(summary, /Status: Not configured/)
+    assert.match(dataText, /"isEnabled": false/)
   })
 
   test('When deeply nested single-key configuration is used, then it unpacks correctly', async () => {
@@ -799,20 +973,115 @@ describe('get_connector_policy tool handler', () => {
     assert.match(dataText, /"isEnabled": false/)
   })
 
-  test('When orgUnitId has id: prefix, then it normalizes it by removing the prefix', async () => {
-    let capturedOrgUnitId
+  test('When ON_FILE_ATTACHED has only Malware restricted (Malware Scan All = No), then it reports only Malware warning', async () => {
     const mockChromePolicyClient = {
-      getConnectorPolicy: async (customerId, orgUnitId) => {
-        capturedOrgUnitId = orgUnitId
-        return []
-      },
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+              malwareOnByDefault: false,
+            },
+          },
+        },
+      ],
     }
 
     const handler = getHandler(mockChromePolicyClient)
 
-    await handler({ customerId: 'C123', orgUnitId: 'id:OU123', policy: 'ON_FILE_ATTACHED' }, { requestInfo: {} })
+    const result = await handler(
+      { customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_FILE_ATTACHED' },
+      { requestInfo: {} },
+    )
+    const summary = result.content[0].text
 
-    assert.strictEqual(capturedOrgUnitId, 'OU123')
+    assert.match(summary, /⚠️ Malware Analysis is restricted. Scanning is NOT enabled for all files/)
+    assert.doesNotMatch(summary, /⚠️ Sensitive Analysis is restricted/)
+  })
+
+  test('When ON_FILE_ATTACHED has only Sensitive restricted (Sensitive Scan All = No), then it reports only Sensitive warning', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+              sensitiveOnByDefault: false,
+            },
+          },
+        },
+      ],
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler(
+      { customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_FILE_ATTACHED' },
+      { requestInfo: {} },
+    )
+    const summary = result.content[0].text
+
+    assert.match(summary, /⚠️ Sensitive Analysis is restricted. Scanning is NOT enabled for all files/)
+    assert.doesNotMatch(summary, /⚠️ Malware Analysis is restricted/)
+  })
+
+  test('When ON_PRINT has restricted scanning (Inclusion List) in array, then it reports specific warning', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              onPrintAnalysisConnectorConfiguration: {
+                printConfigurations: [
+                  {
+                    serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                    sensitiveUrlPatterns: {
+                      onByDefault: false,
+                      urlPatterns: ['trusted.print'],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler({ customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_PRINT' }, { requestInfo: {} })
+    const summary = result.content[0].text
+
+    assert.match(summary, /⚠️ Sensitive Analysis is restricted. Scanning is ONLY enabled for specific URL patterns/)
+  })
+
+  test('When ON_PRINT has disabled delay enforcement in array, then it reports warning', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async () => [
+        {
+          value: {
+            value: {
+              onPrintAnalysisConnectorConfiguration: {
+                printConfigurations: [
+                  {
+                    serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                    delayDeliveryUntilVerdict: false,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler({ customerId: 'C123', orgUnitId: 'OU123', policy: 'ON_PRINT' }, { requestInfo: {} })
+    const summary = result.content[0].text
+
+    assert.match(summary, /Delay enforcement is disabled/)
   })
 
   test('When ON_PRINT has sensitive scanning restricted (Inclusion List), then it reports "ONLY enabled" warning', async () => {

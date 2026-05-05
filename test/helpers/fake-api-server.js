@@ -25,6 +25,34 @@ limitations under the License.
 import express from 'express'
 import { randomUUID } from 'node:crypto'
 
+/**
+ * Reserved prototype keys that must not be set on a plain object via
+ * arbitrary fixture input — assigning to any of these would mutate
+ * Object.prototype and affect every other object in the process.
+ */
+const PROTO_POLLUTING_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/**
+ * @param {string|number|undefined} key
+ * @returns {boolean} true when the key is safe to use as a plain-object property.
+ */
+function isSafeKey(key) {
+  return key !== undefined && !PROTO_POLLUTING_KEYS.has(String(key))
+}
+
+/**
+ * Build a null-prototype map containing the given entries. We use this for
+ * every state container that the route handlers index with user-controlled
+ * keys (customerId, orgUnitId, productId, schemaName, serviceName, …) so
+ * `state.customers['__proto__']` and friends return undefined instead of
+ * walking up to Object.prototype.
+ * @param {object} entries Initial enumerable own properties to copy in.
+ * @returns {object} A null-prototype map populated with `entries`.
+ */
+function nullProtoMap(entries) {
+  return Object.assign(Object.create(null), entries)
+}
+
 /** Initial state factory */
 
 /**
@@ -33,11 +61,11 @@ import { randomUUID } from 'node:crypto'
 function getInitialState() {
   return {
     defaultCustomerId: 'C0123456',
-    customers: {
+    customers: nullProtoMap({
       C0123456: { id: 'C0123456', customerDomain: 'example.com' },
-    },
-    orgUnits: {
-      C0123456: {
+    }),
+    orgUnits: nullProtoMap({
+      C0123456: nullProtoMap({
         fakeOUId1: {
           name: 'Root OU',
           orgUnitId: 'id:fakeOUId1',
@@ -50,9 +78,9 @@ function getInitialState() {
           orgUnitPath: '/Child OU',
           parentOrgUnitId: 'id:fakeOUId1',
         },
-      },
-    },
-    policies: {
+      }),
+    }),
+    policies: nullProtoMap({
       'policies/fakeDlpRule1': {
         name: 'policies/fakeDlpRule1',
         customer: 'customers/C0123456',
@@ -108,12 +136,12 @@ function getInitialState() {
           },
         },
       },
-    },
+    }),
     // Connector policies keyed by customerId -> orgUnitId -> schema name
     // Returned by policies:resolve
-    connectorPolicies: {
-      C0123456: {
-        fakeOUId1: {
+    connectorPolicies: nullProtoMap({
+      C0123456: nullProtoMap({
+        fakeOUId1: nullProtoMap({
           'chrome.users.OnFileAttachedConnectorPolicy': [
             {
               value: {
@@ -178,7 +206,7 @@ function getInitialState() {
           ],
           'chrome.users.RealtimeUrlCheck': [
             {
-              policyValue: {
+              value: {
                 policySchema: 'chrome.users.RealtimeUrlCheck',
                 value: {
                   realtimeUrlCheckEnabled: 'ENTERPRISE_REAL_TIME_URL_CHECK_MODE_ENUM_ENABLED',
@@ -187,9 +215,9 @@ function getInitialState() {
             },
           ],
           'chrome.users.OnSecurityEvent': [],
-        },
-      },
-    },
+        }),
+      }),
+    }),
     // Global/Unassigned policies (backwards compat or generic)
     globalConnectorPolicies: {
       'chrome.users.apps.InstallType': [
@@ -210,21 +238,21 @@ function getInitialState() {
       { version: '121.0.6167.85', count: '3', channel: 'BETA' },
     ],
     profiles: [],
-    licenses: {
-      C0123456: {
-        101040: {
+    licenses: nullProtoMap({
+      C0123456: nullProtoMap({
+        101040: nullProtoMap({
           1010400001: [{ userId: 'user1@example.com', skuId: '1010400001', productId: '101040' }],
-        },
-      },
-    },
-    serviceUsage: {
+        }),
+      }),
+    }),
+    serviceUsage: nullProtoMap({
       'admin.googleapis.com': 'ENABLED',
       'chromemanagement.googleapis.com': 'ENABLED',
       'chromepolicy.googleapis.com': 'ENABLED',
       'cloudidentity.googleapis.com': 'ENABLED',
       'licensing.googleapis.com': 'ENABLED',
       'serviceusage.googleapis.com': 'ENABLED',
-    },
+    }),
   }
 }
 
@@ -417,13 +445,16 @@ export function createFakeApp() {
       const orgUnitId = targetResource.split('/').pop() || 'unknown'
       const schema = policyValue.policySchema
 
+      if (!isSafeKey(customerId) || !isSafeKey(orgUnitId) || !isSafeKey(schema)) {
+        // Skip batch entries whose keys would mutate Object.prototype.
+        continue
+      }
       if (!state.connectorPolicies[customerId]) {
-        state.connectorPolicies[customerId] = {}
+        state.connectorPolicies[customerId] = Object.create(null)
       }
       if (!state.connectorPolicies[customerId][orgUnitId]) {
-        state.connectorPolicies[customerId][orgUnitId] = {}
+        state.connectorPolicies[customerId][orgUnitId] = Object.create(null)
       }
-
       state.connectorPolicies[customerId][orgUnitId][schema] = [
         {
           value: {
@@ -442,7 +473,10 @@ export function createFakeApp() {
     const customerId = state.defaultCustomerId
     let policies = Object.values(state.policies).filter(p => p.customer === `customers/${customerId}`)
 
-    const filter = req.query.filter
+    // Express query strings can be string | string[] | ParsedQs depending on
+    // ?filter=… vs ?filter=…&filter=…; coerce to a single string before
+    // pattern-matching so .includes(...) doesn't behave like Array#includes.
+    const filter = typeof req.query.filter === 'string' ? req.query.filter : ''
     if (filter) {
       if (
         filter.includes('setting.type.startsWith("settings/rule.dlp")') ||
@@ -624,7 +658,7 @@ export function createFakeApp() {
     } else if (data.kind === 'admin#directory#orgUnits') {
       const customerId = state.defaultCustomerId
       if (!state.orgUnits[customerId]) {
-        state.orgUnits[customerId] = {}
+        state.orgUnits[customerId] = Object.create(null)
       }
       data.organizationUnits.forEach(ou => {
         state.orgUnits[customerId][ou.orgUnitId.replace('id:', '')] = ou
@@ -633,11 +667,14 @@ export function createFakeApp() {
       state.activities.push(...data.items)
     } else if (data.kind === 'licensing#licenseAssignment') {
       const customerId = state.defaultCustomerId
+      if (!isSafeKey(customerId) || !isSafeKey(data.productId) || !isSafeKey(data.skuId)) {
+        return
+      }
       if (!state.licenses[customerId]) {
-        state.licenses[customerId] = {}
+        state.licenses[customerId] = Object.create(null)
       }
       if (!state.licenses[customerId][data.productId]) {
-        state.licenses[customerId][data.productId] = {}
+        state.licenses[customerId][data.productId] = Object.create(null)
       }
       if (!state.licenses[customerId][data.productId][data.skuId]) {
         state.licenses[customerId][data.productId][data.skuId] = []
@@ -645,13 +682,16 @@ export function createFakeApp() {
       state.licenses[customerId][data.productId][data.skuId].push(data)
     } else if (data.kind === 'licensing#licenseAssignmentList') {
       const customerId = state.defaultCustomerId
-      if (!state.licenses[customerId]) {
-        state.licenses[customerId] = {}
+      if (!isSafeKey(customerId)) {
+        return
       }
-      state.licenses[customerId] = {} // Clear existing
+      state.licenses[customerId] = Object.create(null) // Clear existing
       data.items.forEach(item => {
+        if (!isSafeKey(item.productId) || !isSafeKey(item.skuId)) {
+          return
+        }
         if (!state.licenses[customerId][item.productId]) {
-          state.licenses[customerId][item.productId] = {}
+          state.licenses[customerId][item.productId] = Object.create(null)
         }
         if (!state.licenses[customerId][item.productId][item.skuId]) {
           state.licenses[customerId][item.productId][item.skuId] = []
@@ -659,7 +699,7 @@ export function createFakeApp() {
         state.licenses[customerId][item.productId][item.skuId].push(item)
       })
     } else if (data.kind === 'cloudidentity#policies') {
-      state.policies = {} // Clear existing
+      state.policies = Object.create(null) // Clear existing
       data.policies.forEach(policy => {
         state.policies[policy.name] = policy
       })
