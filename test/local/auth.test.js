@@ -18,12 +18,28 @@ import assert from 'node:assert/strict'
 import { describe, test, mock } from 'node:test'
 import esmock from 'esmock'
 
+function createMockExecFile(...handlers) {
+  return mock.fn((cmd, args, opts, cb) => {
+    let stdout = ''
+    for (const handler of handlers) {
+      const result = handler(cmd, args, opts)
+      if (result !== undefined && result !== null) {
+        stdout = result
+        break
+      }
+    }
+    cb(null, stdout, '')
+  })
+}
+
 describe('Auth', () => {
   test('When an auth token is provided, then it returns an OAuth2 client', async () => {
     const { getAuthClient } = await esmock('../../lib/util/auth.js', {
       'google-auth-library': {
         OAuth2Client: class {
-          setCredentials() {}
+          setCredentials(credentials) {
+            assert.deepStrictEqual(credentials, { access_token: 'test-token' })
+          }
         },
       },
     })
@@ -32,17 +48,23 @@ describe('Auth', () => {
   })
 
   test('When no auth token is provided, then it returns a GoogleAuth client', async () => {
+    let getClientCalled = false
     const { getAuthClient } = await esmock('../../lib/util/auth.js', {
       'google-auth-library': {
         GoogleAuth: class {
           async getClient() {
-            return {}
+            getClientCalled = true
+            return {
+              getAccessToken: async () => ({ token: 'mock-token' }),
+            }
           }
         },
       },
     })
     const client = await getAuthClient([])
     assert.ok(client)
+    assert.strictEqual(getClientCalled, true)
+    assert.equal(typeof client.getAccessToken, 'function')
   })
 
   test('When ADC credentials are valid, then ensureADCCredentials returns true', async () => {
@@ -71,8 +93,7 @@ describe('Auth', () => {
   })
 
   test('When ADC credentials are missing or invalid, then ensureADCCredentials returns false', async () => {
-    // Mock console.log/error to suppress output during test
-    const consoleLogMock = mock.method(console, 'log', () => {})
+    // Mock console.error to suppress output during test
     const consoleErrorMock = mock.method(console, 'error', () => {})
 
     const { ensureADCCredentials } = await esmock('../../lib/util/auth.js', {
@@ -89,34 +110,37 @@ describe('Auth', () => {
     assert.strictEqual(result, false)
 
     // Restore console mocks
-    consoleLogMock.mock.restore()
     consoleErrorMock.mock.restore()
   })
 
   describe('getAuthErrorMessage', () => {
     test('When a project with the required API enabled is found, then it is suggested', async () => {
-      const mockExecFile = mock.fn((cmd, args, opts, cb) => {
-        let stdout = ''
-        if (cmd === 'gcloud' && args.includes('--version')) {
-          stdout = 'Google Cloud SDK'
-        } else if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
-          stdout = '(unset)\n'
-        } else if (
-          cmd === 'gcloud' &&
-          args.includes('projects') &&
-          args.includes('list') &&
-          args.includes('--limit=10')
-        ) {
-          stdout = 'proj-1\nproj-2\nproj-3\n'
-        } else if (cmd === 'gcloud' && args.includes('services') && args.includes('list')) {
-          const projectIndex = args.indexOf('--project') + 1
-          const projectId = args[projectIndex]
-          if (projectId === 'proj-2') {
-            stdout = 'admin.googleapis.com\n'
+      const mockExecFile = createMockExecFile(
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('--version')) {
+            return 'Google Cloud SDK'
           }
-        }
-        cb(null, stdout, '')
-      })
+        },
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
+            return '(unset)\n'
+          }
+        },
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('projects') && args.includes('list') && args.includes('--limit=10')) {
+            return 'proj-1\nproj-2\nproj-3\n'
+          }
+        },
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('services') && args.includes('list')) {
+            const projectIndex = args.indexOf('--project') + 1
+            const projectId = args[projectIndex]
+            if (projectId === 'proj-2') {
+              return 'admin.googleapis.com\n'
+            }
+          }
+        },
+      )
 
       const { getAuthErrorMessage } = await esmock('../../lib/util/auth-error.js', {
         'node:child_process': {
@@ -132,22 +156,23 @@ describe('Auth', () => {
     })
 
     test('When no project has the API enabled, then it falls back to the most recent project', async () => {
-      const mockExecFile = mock.fn((cmd, args, opts, cb) => {
-        let stdout = ''
-        if (cmd === 'gcloud' && args.includes('--version')) {
-          stdout = 'Google Cloud SDK'
-        } else if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
-          stdout = '(unset)\n'
-        } else if (
-          cmd === 'gcloud' &&
-          args.includes('projects') &&
-          args.includes('list') &&
-          args.includes('--limit=10')
-        ) {
-          stdout = 'proj-1\nproj-2\n'
-        }
-        cb(null, stdout, '')
-      })
+      const mockExecFile = createMockExecFile(
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('--version')) {
+            return 'Google Cloud SDK'
+          }
+        },
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
+            return '(unset)\n'
+          }
+        },
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('projects') && args.includes('list') && args.includes('--limit=10')) {
+            return 'proj-1\nproj-2\n'
+          }
+        },
+      )
 
       const { getAuthErrorMessage } = await esmock('../../lib/util/auth-error.js', {
         'node:child_process': {
@@ -162,15 +187,18 @@ describe('Auth', () => {
     })
 
     test('When no projects are found at all, then it falls back to a generic console URL message', async () => {
-      const mockExecFile = mock.fn((cmd, args, opts, cb) => {
-        let stdout = ''
-        if (cmd === 'gcloud' && args.includes('--version')) {
-          stdout = 'Google Cloud SDK'
-        } else if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
-          stdout = '(unset)\n'
-        }
-        cb(null, stdout, '')
-      })
+      const mockExecFile = createMockExecFile(
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('--version')) {
+            return 'Google Cloud SDK'
+          }
+        },
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
+            return '(unset)\n'
+          }
+        },
+      )
 
       const { getAuthErrorMessage } = await esmock('../../lib/util/auth-error.js', {
         'node:child_process': {
@@ -187,15 +215,18 @@ describe('Auth', () => {
     })
 
     test('When a project is already configured in gcloud, then it uses that project directly', async () => {
-      const mockExecFile = mock.fn((cmd, args, opts, cb) => {
-        let stdout = ''
-        if (cmd === 'gcloud' && args.includes('--version')) {
-          stdout = 'Google Cloud SDK'
-        } else if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
-          stdout = 'configured-project\n'
-        }
-        cb(null, stdout, '')
-      })
+      const mockExecFile = createMockExecFile(
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('--version')) {
+            return 'Google Cloud SDK'
+          }
+        },
+        (cmd, args) => {
+          if (cmd === 'gcloud' && args.includes('config') && args.includes('get-value')) {
+            return 'configured-project\n'
+          }
+        },
+      )
 
       const { getAuthErrorMessage } = await esmock('../../lib/util/auth-error.js', {
         'node:child_process': {
