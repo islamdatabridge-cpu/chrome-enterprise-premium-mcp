@@ -274,4 +274,152 @@ describe('check_and_enable_cep_api tool', () => {
       ),
     )
   })
+
+  test('When enableService returns done:true, then the API is marked ENABLED (synchronous LRO)', async () => {
+    const mockServiceUsageClient = {
+      getServiceStatus: mock.fn(async (projectId, api) => ({
+        name: `projects/${projectId}/services/${api}`,
+        state: 'DISABLED',
+      })),
+      enableService: mock.fn(async () => ({ done: true, response: { state: 'ENABLED' } })),
+    }
+
+    const handler = await setupTool(mockServiceUsageClient)
+
+    const result = await handler(
+      {
+        projectId: 'test-project',
+        apiName: SERVICE_NAMES.ADMIN_SDK,
+        enable: true,
+        checkAll: false,
+      },
+      { requestInfo: {} },
+    )
+
+    assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — NEWLY_ENABLED`))
+    const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
+    assert.strictEqual(status.status, 'ENABLED')
+  })
+
+  test('When enableService returns done:false, then the API is marked ENABLING with a pending message', async () => {
+    const mockServiceUsageClient = {
+      getServiceStatus: mock.fn(async (projectId, api) => ({
+        name: `projects/${projectId}/services/${api}`,
+        state: 'DISABLED',
+      })),
+      enableService: mock.fn(async () => ({
+        done: false,
+        name: 'operations/test-operation-123',
+      })),
+    }
+
+    const handler = await setupTool(mockServiceUsageClient)
+
+    const result = await handler(
+      {
+        projectId: 'test-project',
+        apiName: SERVICE_NAMES.ADMIN_SDK,
+        enable: true,
+        checkAll: false,
+      },
+      { requestInfo: {} },
+    )
+
+    assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — ENABLING`))
+    assert.ok(result.content[0].text.includes('enable requested, may take a few minutes'))
+    assert.ok(result.content[0].text.includes('Re-run this tool to verify status.'))
+    assert.ok(
+      !result.content[0].text.includes('operations/test-operation-123'),
+      'opaque operation ID should not appear in the user-facing summary',
+    )
+    const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
+    assert.strictEqual(status.status, 'ENABLING')
+    assert.strictEqual(status.operationName, 'operations/test-operation-123')
+  })
+
+  test('When enableService returns done:false with no operation name, then operationName is omitted from structuredContent', async () => {
+    const mockServiceUsageClient = {
+      getServiceStatus: mock.fn(async (projectId, api) => ({
+        name: `projects/${projectId}/services/${api}`,
+        state: 'DISABLED',
+      })),
+      enableService: mock.fn(async () => ({ done: false })),
+    }
+
+    const handler = await setupTool(mockServiceUsageClient)
+
+    const result = await handler(
+      {
+        projectId: 'test-project',
+        apiName: SERVICE_NAMES.ADMIN_SDK,
+        enable: true,
+        checkAll: false,
+      },
+      { requestInfo: {} },
+    )
+
+    assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — ENABLING`))
+    assert.ok(
+      !result.content[0].text.includes('unknown'),
+      'no "unknown" literal when upstream returned no operation name',
+    )
+    const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
+    assert.strictEqual(status.status, 'ENABLING')
+    assert.strictEqual(status.operationName, undefined)
+  })
+
+  test('When enableService returns an LRO error, then the API is marked FAILED with the message', async () => {
+    const mockServiceUsageClient = {
+      getServiceStatus: mock.fn(async (projectId, api) => ({
+        name: `projects/${projectId}/services/${api}`,
+        state: 'DISABLED',
+      })),
+      enableService: mock.fn(async () => ({
+        done: true,
+        error: { code: 7, message: 'Billing must be enabled for this project to use Service Usage.' },
+      })),
+    }
+
+    const handler = await setupTool(mockServiceUsageClient)
+
+    const result = await handler(
+      { projectId: 'test-project', apiName: SERVICE_NAMES.ADMIN_SDK, enable: true, checkAll: false },
+      { requestInfo: {} },
+    )
+
+    assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — FAILED`))
+    assert.ok(result.content[0].text.includes('Billing must be enabled'))
+    assert.ok(
+      !result.content[0].text.includes('NEWLY_ENABLED'),
+      'an LRO with done:true plus error must not be reported as NEWLY_ENABLED',
+    )
+    const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
+    assert.strictEqual(status.status, 'FAILED')
+    assert.ok(status.error.includes('Billing must be enabled'))
+  })
+
+  test('When enableService returns an unexpected response shape, then the API is marked UNKNOWN', async () => {
+    const mockServiceUsageClient = {
+      getServiceStatus: mock.fn(async (projectId, api) => ({
+        name: `projects/${projectId}/services/${api}`,
+        state: 'DISABLED',
+      })),
+      enableService: mock.fn(async () => ({})),
+    }
+
+    const handler = await setupTool(mockServiceUsageClient)
+
+    const result = await handler(
+      { projectId: 'test-project', apiName: SERVICE_NAMES.ADMIN_SDK, enable: true, checkAll: false },
+      { requestInfo: {} },
+    )
+
+    assert.ok(result.content[0].text.includes(`- **${SERVICE_NAMES.ADMIN_SDK}** — UNKNOWN`))
+    assert.ok(
+      !result.content[0].text.includes('ENABLING'),
+      'an unexpected response shape must not be misreported as ENABLING',
+    )
+    const status = result.structuredContent.apiStatuses.find(s => s.apiName === SERVICE_NAMES.ADMIN_SDK)
+    assert.strictEqual(status.status, 'UNKNOWN')
+  })
 })
