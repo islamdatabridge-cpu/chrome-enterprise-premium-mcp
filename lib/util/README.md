@@ -48,7 +48,7 @@ logging, retry, GCP detection, CEL validation, and feature flags.
   then scope diff against the required set.
 
 - `oauth_flow.js`: `oauthFlowCredential()`. Managed-OAuth login flow
-  via `runLoginFlow()` (loopback callback or headless paste-back) and
+  through `runLoginFlow()` (loopback callback or headless paste-back) and
   a probe over the cached token. Default scopes: `OAUTH_SCOPES` (no
   `cloud-platform`).
 

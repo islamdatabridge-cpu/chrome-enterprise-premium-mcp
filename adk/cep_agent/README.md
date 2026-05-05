@@ -1,89 +1,84 @@
-# CEP Agent
+<!--
+Copyright 2026 Google LLC
 
-This is a sample CEP agent that can be configured as a single agent or a
-multi-agent system. The agent handles queries and relays the requests to the CEP
-MCP server for further processing.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+# CEP agent
+
+A sample CEP agent that you can configure as a single agent or as a multi-agent system. The agent handles user queries and forwards the requests to the CEP MCP server for tool calls.
 
 ## Overview
 
-The CEP agent is designed to assist with Chrome Enterprise Premium administration.
-It can be configured in two ways:
+The CEP agent assists with Chrome Enterprise Premium administration. You can configure it in two ways.
 
-- **Single Agent**: A single agent that can handle all tasks, including
-  onboarding, troubleshooting, and metadata retrieval.
-- **Multi-agent**: A multi-agent system with a root agent that delegates tasks
-  to specialized agents for onboarding, troubleshooting, and metadata
-  retrieval.
+- **Single agent.** One agent handles every task, including onboarding, troubleshooting, and metadata retrieval.
+- **Multi-agent.** A root agent delegates each task to a specialized agent for onboarding, troubleshooting, or metadata retrieval.
 
-The agent uses the `gemini-2.0-flash` model and interacts with the CEP MCP server
-via a toolset.
+The agent uses the `gemini-2.5-flash` model (defined as `AI_MODEL_NAME` in `agent.py`) and reaches the CEP MCP server through an MCP toolset.
 
-## Features
+## Capabilities
 
-- **Onboarding**: Assists with setting up and configuring Chrome Enterprise
-  Premium.
-- **Troubleshooting**: Helps diagnose and resolve issues with DLP rules and
-  other configurations.
-- **Metadata Retrieval**: Fetches customer and organizational unit IDs.
+- **Onboarding.** Walks an administrator through Chrome Enterprise Premium setup and configuration.
+- **Troubleshooting.** Diagnoses DLP rule problems and other configuration issues.
+- **Metadata retrieval.** Fetches the customer ID and organizational-unit IDs.
 
-## Getting Started
+## Prerequisites
 
-To get started with the CEP agent, you need to have the following prerequisites:
+- Node.js installed and on `PATH`.
+- The Google Cloud CLI (`gcloud`) installed and on `PATH`.
+- The Agent Development Kit installed.
 
-- Node.js installed
-- gcloud CLI installed
-- Agent development kit installed
+## Run the agent locally
 
-### Running Locally
+Follow these steps to run the agent against a real Google Cloud project.
 
-To run the agent locally, follow these steps:
+1. Authenticate to `gcloud` with the scope set the MCP server needs:
 
-1.  **Authenticate to gcloud:**
+   ```bash
+   gcloud auth application-default login \
+     --scopes=openid,\
+   https://www.googleapis.com/auth/userinfo.email,\
+   https://www.googleapis.com/auth/chrome.management.policy,\
+   https://www.googleapis.com/auth/chrome.management.reports.readonly,\
+   https://www.googleapis.com/auth/chrome.management.profiles.readonly,\
+   https://www.googleapis.com/auth/admin.reports.audit.readonly,\
+   https://www.googleapis.com/auth/admin.directory.orgunit.readonly,\
+   https://www.googleapis.com/auth/admin.directory.customer.readonly,\
+   https://www.googleapis.com/auth/apps.licensing,\
+   https://www.googleapis.com/auth/cloud-identity.policies,\
+   https://www.googleapis.com/auth/service.management,\
+   https://www.googleapis.com/auth/service.management.readonly,\
+   https://www.googleapis.com/auth/cloud-platform \
+     --no-launch-browser
+   ```
 
-    ```bash
-    gcloud auth application-default login \
-    --scopes=openid,\
-    https://www.googleapis.com/auth/userinfo.email,\
-    https://www.googleapis.com/auth/chrome.management.policy,\
-    https://www.googleapis.com/auth/chrome.management.reports.readonly,\
-    https://www.googleapis.com/auth/chrome.management.profiles.readonly,\
-    https://www.googleapis.com/auth/admin.reports.audit.readonly,\
-    https://www.googleapis.com/auth/admin.directory.orgunit.readonly,\
-    https://www.googleapis.com/auth/admin.directory.customer.readonly,\
-    https://www.googleapis.com/auth/apps.licensing,\
-    https://www.googleapis.com/auth/cloud-identity.policies,\
-    https://www.googleapis.com/auth/service.management,\
-    https://www.googleapis.com/auth/service.management.readonly,\
-    https://www.googleapis.com/auth/cloud-platform \
-    --no-launch-browser
-    ```
+   For an OAuth-flow alternative that does not require `gcloud` (and uses the OAuth-narrow scope set without `cloud-platform`), run `mcp auth login` from the repo root. For the setup walkthrough, see [`docs/auth-bring-your-own-oauth-client.md`](../../docs/auth-bring-your-own-oauth-client.md).
 
-    OAuth-flow alternative (no `gcloud` needed; OAuth-narrow scope set,
-    no `cloud-platform`):
+2. Start the ADK server:
 
-    ```bash
-    mcp auth login
-    ```
+   ```bash
+   adk web --host 0.0.0.0 adk/
+   ```
 
-    Setup walkthrough at
-    [`docs/auth-bring-your-own-oauth-client.md`](../../docs/auth-bring-your-own-oauth-client.md).
-
-2.  **Start the ADK server:**
-
-    ```bash
-    adk web --host 0.0.0.0 adk/
-    ```
-
-This will start the ADK server locally. You can then open your browser to interact with the agent.
+   The ADK server starts locally. Open the printed URL in a browser to interact with the agent.
 
 ## Usage
 
-You can interact with the agent by sending it queries. The agent will then use
-its tools and knowledge to provide a response.
+Send a query to the agent. The agent uses its tools and built-in knowledge to respond.
 
-### Example
+### Example interaction
 
-**User**: "My download rules are broken."
-
-**Agent**: "I found X rules related to downloads. Rule 'A' is active but the
-connector seems [Status]. Would you like to debug Rule A or Rule B deeply?"
+> **You:** "My download rules are broken."
+>
+> **Agent:** "I found X rules related to downloads. Rule A is active, but the connector status looks `<status>`. Do you want to debug rule A or rule B in detail?"

@@ -27,7 +27,7 @@ Google Account data, as well as other data shared with you.
 - Always review the actions Gemini CLI takes on your behalf and confirm
   they match what you asked for.
 
-## Quick Start
+## Quick start
 
 ```bash
 git clone https://github.com/google/chrome-enterprise-premium-mcp.git
@@ -84,7 +84,7 @@ gcloud auth application-default set-quota-project YOUR_PROJECT_ID
 > **Scopes must be provided at login time.** You cannot add scopes to
 > existing ADC credentials. If you get "insufficient scopes" errors,
 > delete `~/.config/gcloud/application_default_credentials.json` and re-run
-> the login command above.
+> the `gcloud auth application-default login` command from the previous step.
 >
 > **The quota project is required.** Without it you'll see a "quota project
 > not set" error on the first API call.
@@ -200,7 +200,7 @@ Add to `~/.gemini/settings.json`:
 
 </details>
 
-> (Optional) If you are running from a local checkout instead of npx, replace the command with `node` and args with the absolute path to `mcp-server.js`. Relative paths may not resolve correctly depending on the client.
+> Optional: If you are running from a local checkout instead of npx, replace the command with `node` and args with the absolute path to `mcp-server.js`. Relative paths might not resolve correctly depending on the client.
 
 ### 4. Verify
 
@@ -208,7 +208,7 @@ Restart your MCP client, then ask:
 
 > "What Chrome Enterprise Premium tools do you have access to?"
 
-You should see the agent discover and list the available tools. If tools don't
+The agent discovers and lists the available tools. If tools don't
 appear, see [Troubleshooting](#troubleshooting).
 
 ## Configuration
@@ -234,7 +234,7 @@ For environment variables and stdio vs. HTTP transport, see
 > permissions produces `403 Permission Denied` with no indication that a
 > Workspace role is missing.
 
-## Available Tools and Prompts
+## Available tools and prompts
 
 ### Prompts
 
@@ -278,7 +278,7 @@ presubmit suite plus a real-API integration pass.
 
 Presubmit is **read-only**. If formatting or lint fails, run
 `npm run format` and `npm run lint:fix` to fix, then re-run. The husky
-pre-commit hook auto-fixes staged files via lint-staged, so commits from a
+pre-commit hook auto-fixes staged files through lint-staged, so commits from a
 clean working tree usually pass without manual fixup.
 
 GitHub Actions runs the same checks on every pull request as four parallel
@@ -317,7 +317,7 @@ For license requirements, Workspace edition, service-account auth,
 experimental features, and other recurring questions, see
 [`docs/faq.md`](docs/faq.md).
 
-## Reporting Bugs
+## Reporting bugs
 
 If something isn't working:
 
@@ -330,8 +330,7 @@ If something isn't working:
 
 ## Contributing
 
-Contributions are welcome! Please read the [CONTRIBUTING.md](CONTRIBUTING.md)
-file for details on how to contribute to this project.
+Contributions are welcome. For details on how to contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Legal
 

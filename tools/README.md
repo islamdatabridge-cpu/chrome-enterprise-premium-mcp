@@ -68,14 +68,13 @@ Delete tools (`delete_agent_dlp_rule`, `delete_detector`) only register when
 
 ## Utilities (`utils/`)
 
-- `wrapper.js`: `guardedToolCall` and `formatToolResponse` (described above).
+- `wrapper.js`: `guardedToolCall` and `formatToolResponse` (described in the previous sections).
 - `org-unit.js`: root org unit resolution with session caching.
 - `detector.js`: shared helper for the three create-detector tools.
 
 ## Shared schemas (`definitions/shared.js`)
 
-Common Zod input/output schemas reused across tools (e.g., `customerId`,
-`orgUnitId` fields).
+Common Zod input/output schemas reused across tools, such as the `customerId` and `orgUnitId` fields.
 
 ## Adding a new tool
 

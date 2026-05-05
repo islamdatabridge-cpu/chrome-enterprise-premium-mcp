@@ -26,7 +26,7 @@ Every API has two files:
 
 - `interfaces/foo_client.js`: abstract base class. Methods throw
   `Error('Not implemented')`. Tools program against the interface.
-- `real_foo_client.js`: production implementation. Authenticates via ADC and
+- `real_foo_client.js`: production implementation. Authenticates through ADC and
   calls the live Google API. Each method also accepts a bearer token,
   which when supplied takes the place of ADC.
 
@@ -38,7 +38,7 @@ fake API server in `test/helpers/fake-api-server.js`. The factory in
 // Real backend (production / postsubmit): no args, uses ADC.
 new RealAdminSdkClient()
 
-// Fake backend (presubmit): same class, redirected via rootUrl + a fake
+// Fake backend (presubmit): same class, redirected through rootUrl + a fake
 // auth provider that short-circuits getAuthClient().
 new RealAdminSdkClient({ rootUrl, auth: fakeAuth })
 ```
