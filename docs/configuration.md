@@ -16,13 +16,11 @@ limitations under the License.
 
 # Configuration
 
-The server is configured via environment variables. How you set them depends
-on which transport mode you are using.
+You configure the server with environment variables. How you set them depends on the transport mode.
 
 ## MCP client (stdio mode)
 
-Add variables to the `env` block of your client's settings file. The client
-injects them into the server's environment on startup.
+Add the variables to the `env` block of your MCP client's settings file. The client injects them into the server's environment on startup.
 
 ```json
 {
@@ -41,8 +39,7 @@ injects them into the server's environment on startup.
 
 ## Standalone (HTTP mode)
 
-You can pass variables inline or load them from a `.env` file in your working
-directory. See [`.env.example`](../.env.example) for the full set of options.
+You can pass variables inline on the command line or load them from a `.env` file in your working directory. For the full set of options, see [`.env.example`](../.env.example).
 
 ```bash
 PORT=8080 GCP_STDIO=false npx -y @google/chrome-enterprise-premium-mcp@latest
@@ -50,21 +47,31 @@ PORT=8080 GCP_STDIO=false npx -y @google/chrome-enterprise-premium-mcp@latest
 
 ## Key variables
 
-| Variable                     | Description                                          | Default |
-| :--------------------------- | :--------------------------------------------------- | :------ |
-| `GCP_STDIO`                  | `true` for Stdio (local); `false` for HTTP (remote). | `true`  |
-| `PORT`                       | Network port when `GCP_STDIO=false`.                 | `0`     |
-| `GOOGLE_CLOUD_QUOTA_PROJECT` | GCP project ID for API quotas.                       | -       |
-| `LOG_LEVEL`                  | Verbosity (`error`, `warn`, `info`, `debug`).        | `info`  |
+| Variable                     | Description                                                                                                                                                                                                                                        | Default |
+| :--------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------ |
+| `GCP_STDIO`                  | `true` for stdio (local), `false` for HTTP (remote).                                                                                                                                                                                               | `true`  |
+| `PORT`                       | Network port when `GCP_STDIO=false`.                                                                                                                                                                                                               | `0`     |
+| `GOOGLE_CLOUD_QUOTA_PROJECT` | Google Cloud project ID for API quotas.                                                                                                                                                                                                            | -       |
+| `LOG_LEVEL`                  | Verbosity. One of `error`, `warn`, `info`, `debug`.                                                                                                                                                                                                | `info`  |
+| `CEP_BEARER_AUDIENCE`        | When set in HTTP mode, every inbound request must carry an `Authorization: Bearer <id-token>` whose `aud` claim is in this value (comma-separated for multiple). When unset, ID-token verification is off and the server prints a startup warning. | -       |
 
 > [!NOTE]
-> When `GCP_STDIO=false` and `PORT` is unset or `0`, the server binds to a
-> random available port. The actual port is logged at startup, e.g.
-> `Chrome Enterprise Premium MCP server listening on port X`.
+> When `GCP_STDIO=false` and `PORT` is unset or `0`, the server binds to a random available port. The actual port is logged at startup, for example: `Chrome Enterprise Premium MCP server listening on port X`.
 
-## Authenticating to Google APIs
+## Authenticate to Google APIs
 
-The server authenticates to Google APIs via Application Default Credentials
-(ADC), regardless of transport. Set ADC up using the Quick Start in the root
-[`README.md`](../README.md). The HTTP transport is unauthenticated at the
-network layer; bind it to a trusted interface only.
+`lib/util/auth.js#getAuthClient` resolves credentials in this priority order: a bearer header on the request, Application Default Credentials, then the OAuth token cache. Pick a setup based on your environment. For situational guidance by deployment shape, see the [Which auth path should I use?](faq.md#which-auth-path-should-i-use) FAQ entry.
+
+| Setup                      | Transport | Credential source                              | Setup walkthrough                                                                               |
+| :------------------------- | :-------- | :--------------------------------------------- | :---------------------------------------------------------------------------------------------- |
+| `gcloud` ADC (recommended) | stdio     | ADC, full scope set including `cloud-platform` | [Quick Start §1](../README.md#1-authenticate-with-google-cloud)                                 |
+| OAuth login (workstation)  | stdio     | OAuth token cache, narrow scope set            | [`auth-bring-your-own-oauth-client.md`](auth-bring-your-own-oauth-client.md)                    |
+| Bearer pass-through        | HTTP      | per-request `Authorization: Bearer <token>`    | The caller sets the header; the server forwards it to Google verbatim.                          |
+| Service account + DWD      | stdio     | Service account with domain-wide delegation    | [FAQ entry on service accounts](faq.md#can-i-use-a-service-account-instead-of-user-credentials) |
+
+> [!IMPORTANT]
+> The HTTP-mode default has no network-layer authentication. Bind the listener to a trusted interface only, or set `CEP_BEARER_AUDIENCE` (HTTP mode only) for per-request ID-token verification.
+
+### Inbound bearer ID-token verification (HTTP mode)
+
+For HTTP-mode deployments behind an OAuth-bearing caller, such as Vertex AI Agent Engine, set `CEP_BEARER_AUDIENCE` to the OAuth client ID whose ID-token issuance is allowed for this server. With it set, every inbound request must carry `Authorization: Bearer <id-token>`, and the server checks the token's `aud` claim against `CEP_BEARER_AUDIENCE`. Failures return `401 Unauthorized` ahead of any forward to Google. When `CEP_BEARER_AUDIENCE` is unset, the check is off and the server prints a startup warning.

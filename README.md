@@ -92,6 +92,9 @@ gcloud auth application-default set-quota-project YOUR_PROJECT_ID
 > **Restricted Workspace environments:** If your organization restricts third-party
 > app access, an admin must [trust the gcloud OAuth app](docs/troubleshooting.md#configure-oauth-app-for-sensitive-scopes)
 > before you can authenticate with sensitive Workspace scopes.
+> **Alternative to ADC:** run `mcp auth login` for an OAuth-flow setup.
+> Setup walkthrough at [`docs/auth-bring-your-own-oauth-client.md`](docs/auth-bring-your-own-oauth-client.md).
+> Auth-method matrix at [`docs/configuration.md#authenticating-to-google-apis`](docs/configuration.md#authenticating-to-google-apis).
 
 ### 2. Enable Required APIs
 

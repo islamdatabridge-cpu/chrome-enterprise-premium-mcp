@@ -29,15 +29,16 @@ import { SERVICE_NAMES } from '../../../lib/constants.js'
  * @returns {object} Complete fake server state object.
  */
 export function getBaseState() {
+  const defaultCustomerId = 'C04x8k2m9'
   return {
-    defaultCustomerId: 'C04x8k2m9',
+    defaultCustomerId,
 
     customers: {
-      C04x8k2m9: { id: 'C04x8k2m9', customerDomain: 'example.com' },
+      [defaultCustomerId]: { id: defaultCustomerId, customerDomain: 'example.com' },
     },
 
     orgUnits: {
-      C04x8k2m9: {
+      [defaultCustomerId]: {
         ouRoot: {
           name: 'Root OU',
           orgUnitId: 'id:ouRoot',
@@ -62,7 +63,7 @@ export function getBaseState() {
     policies: {
       'policies/dlpBlock1': {
         name: 'policies/dlpBlock1',
-        customer: 'customers/C04x8k2m9',
+        customer: `customers/${defaultCustomerId}`,
         policyQuery: { orgUnit: 'orgUnits/ouRoot' },
         setting: {
           type: 'settings/rule.dlp',
@@ -80,7 +81,7 @@ export function getBaseState() {
       },
       'policies/dlpWatermark1': {
         name: 'policies/dlpWatermark1',
-        customer: 'customers/C04x8k2m9',
+        customer: `customers/${defaultCustomerId}`,
         policyQuery: { orgUnit: 'orgUnits/ouRoot' },
         setting: {
           type: 'settings/rule.dlp',
@@ -106,7 +107,7 @@ export function getBaseState() {
       },
       'policies/dlpAuditGenAI': {
         name: 'policies/dlpAuditGenAI',
-        customer: 'customers/C04x8k2m9',
+        customer: `customers/${defaultCustomerId}`,
         policyQuery: { orgUnit: 'orgUnits/ouEngineering' },
         setting: {
           type: 'settings/rule.dlp',
@@ -124,7 +125,7 @@ export function getBaseState() {
       },
       'policies/dlpWarnPII': {
         name: 'policies/dlpWarnPII',
-        customer: 'customers/C04x8k2m9',
+        customer: `customers/${defaultCustomerId}`,
         policyQuery: { orgUnit: 'orgUnits/ouSales' },
         setting: {
           type: 'settings/rule.dlp',
@@ -142,7 +143,7 @@ export function getBaseState() {
       },
       'policies/detectorSSN': {
         name: 'policies/detectorSSN',
-        customer: 'customers/C04x8k2m9',
+        customer: `customers/${defaultCustomerId}`,
         policyQuery: { orgUnit: 'orgUnits/ouRoot' },
         setting: {
           type: 'settings/detector.regex',
@@ -155,7 +156,7 @@ export function getBaseState() {
       },
       'policies/detectorPII': {
         name: 'policies/detectorPII',
-        customer: 'customers/C04x8k2m9',
+        customer: `customers/${defaultCustomerId}`,
         policyQuery: { orgUnit: 'orgUnits/ouRoot' },
         setting: {
           type: 'settings/detector.word_list',
@@ -170,7 +171,7 @@ export function getBaseState() {
       },
       'policies/detectorBlockedURLs': {
         name: 'policies/detectorBlockedURLs',
-        customer: 'customers/C04x8k2m9',
+        customer: `customers/${defaultCustomerId}`,
         policyQuery: { orgUnit: 'orgUnits/ouRoot' },
         setting: {
           type: 'settings/detector.url_list',
@@ -364,7 +365,7 @@ export function getBaseState() {
     profiles: [],
 
     licenses: {
-      C04x8k2m9: {
+      [defaultCustomerId]: {
         101040: {
           1010400001: [
             {
@@ -382,12 +383,12 @@ export function getBaseState() {
       },
     },
 
-    // Connector policies. Shape: customerId -> orgUnitId -> schema -> policy[]. Empty by default.
-    connectorPolicies: {},
+    connectorPolicies: {
+      [defaultCustomerId]: {
+        '': {},
+      },
+    },
 
-    // Service Usage state. Every API in SERVICE_NAMES starts ENABLED so
-    // adding a new service does not silently break eval scenarios that
-    // touch it.
     serviceUsage: Object.fromEntries(Object.values(SERVICE_NAMES).map(name => [name, 'ENABLED'])),
   }
 }

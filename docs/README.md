@@ -14,21 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# docs
+# Documentation
 
-Reference documentation for operating and extending the Chrome Enterprise
-Premium MCP server. The root [`README.md`](../README.md) covers installation
-and connecting an MCP client; these docs cover what you need after the server
-is running.
+Reference documentation for operating and extending the Chrome Enterprise Premium MCP server. The root [`README.md`](../README.md) covers installation and connecting an MCP client. These docs cover what you need after the server is running.
 
-- [`configuration.md`](./configuration.md): environment variables and
-  stdio vs. HTTP transport.
-- [`troubleshooting.md`](./troubleshooting.md): auth, permissions, Node.js,
-  and MCP client integration issues with fixes.
-- [`architecture.md`](./architecture.md): code layout, client abstraction,
-  retry behavior, CEL validation.
-- [`faq.md`](./faq.md): license requirements, service accounts, experimental
-  features, and other recurring questions.
+- [`configuration.md`](./configuration.md): Environment variables, stdio and HTTP transport modes, and the per-mechanism authentication matrix.
+- [`troubleshooting.md`](./troubleshooting.md): Authentication, permission, Node.js, and MCP-client integration issues with their fixes.
+- [`architecture.md`](./architecture.md): Code layout, the client abstraction, retry behavior, and CEL validation.
+- [`faq.md`](./faq.md): License requirements, service accounts, experimental features, and other recurring questions.
+- [`auth-bring-your-own-oauth-client.md`](./auth-bring-your-own-oauth-client.md): How to create a Desktop OAuth client and run `mcp auth login`.
+- [`auth-cloud-run-and-gemini-enterprise.md`](./auth-cloud-run-and-gemini-enterprise.md): How to deploy the server behind Cloud Run with Gemini Enterprise.
 
-For contributing changes, see [`../CONTRIBUTING.md`](../CONTRIBUTING.md). For
-the test infrastructure, see [`../test/README.md`](../test/README.md).
+For contributing changes, see [`CONTRIBUTING.md`](../CONTRIBUTING.md). For the test infrastructure, see [`test/README.md`](../test/README.md).
