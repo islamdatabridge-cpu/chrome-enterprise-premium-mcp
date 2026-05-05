@@ -20,7 +20,6 @@ limitations under the License.
 
 import { z } from 'zod'
 import { guardedToolCall, formatToolResponse, safeFormatResponse } from '../utils/wrapper.js'
-import { commonOutputSchemas } from './shared.js'
 import { CONNECTOR_KEY_MAPPING, POLICY_DISPLAY_NAMES } from '../../lib/constants.js'
 import { ConnectorPolicyFilter } from '../../lib/api/real_chrome_policy_client.js'
 import { analyzeConnectorPolicy, humanize } from '../../lib/util/connector_policy_helper.js'
@@ -50,12 +49,22 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
       outputSchema: z
         .object({
           connectorPolicies: z.array(
-            commonOutputSchemas.resolvedChromePolicy.extend({
-              isEnabled: z.boolean().describe('Whether the connector is currently enabled.'),
-            }),
+            z
+              .object({
+                isEnabled: z.boolean().describe('Whether the connector is currently enabled.'),
+                warnings: z
+                  .string()
+                  .optional()
+                  .describe('Semicolon-joined warnings for this policy entry, when present.'),
+              })
+              .passthrough()
+              .describe(
+                'Flattened, human-readable view of the resolved policy. Keys are humanized (for example "serviceProvider (describe to user as \'Provider\')") and values are humanized strings; the original Chrome Policy targetKey/value fields are not preserved.',
+              ),
           ),
           connectorType: z.string(),
           orgUnitId: z.string(),
+          configured: z.boolean().describe('True when at least one policy entry exists and any entry is enabled.'),
         })
         .passthrough(),
     },
@@ -207,16 +216,18 @@ Note: The 'enable_chrome_enterprise_connectors' tool can only ACTIVATE connector
 
               const summary = `Connector policy: ${title}\n${statusLine}${warningSection}`
 
+              const payload = {
+                connectorPolicies: cleanedPolicies,
+                connectorType: policy,
+                orgUnitId,
+                configured: isConfigured,
+                warnings: allWarnings,
+              }
+
               return formatToolResponse({
                 summary,
-                data: cleanedPolicies,
-                structuredContent: {
-                  connectorPolicies: cleanedPolicies,
-                  connectorType: policy,
-                  orgUnitId,
-                  configured: isConfigured,
-                  warnings: allWarnings,
-                },
+                data: payload,
+                structuredContent: payload,
               })
             },
           })
