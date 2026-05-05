@@ -53,10 +53,7 @@ used by `get_document`.
 
 ## Special article: 0-agent-capabilities.md
 
-Article 0 is not just searchable — it is injected alongside the system prompt on
-the agent's first tool call (via `tools/utils/wrapper.js`). It defines what the
-agent can and cannot do, which grounds the agent's behavior from the first
-interaction.
+Article 0 is searchable, and it is also injected alongside the system prompt on the agent's first tool call (through `tools/utils/wrapper.js`). It defines what the agent can and cannot do, which grounds the agent's behavior from the first interaction.
 
 ## Adding a new article
 

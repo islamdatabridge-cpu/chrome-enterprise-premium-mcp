@@ -25,7 +25,7 @@ This project follows
 
 ## Reporting bugs
 
-If you encounter an issue, please file a GitHub issue with the following:
+If you encounter an issue, file a GitHub issue with the following:
 
 1. **Generate a diagnostic report.** In your Gemini CLI session, use the
    `/bug` command. This creates a diagnostic file with session logs and
@@ -90,7 +90,7 @@ files through lint-staged on commit, so a clean working tree usually passes.
 
 On every pull request, GitHub Actions runs four parallel jobs: `lint`,
 `test-unit`, `test-integration-fake`, and `test-smoke`. Each maps to one of
-the `npm run` scripts above. The jobs run hermetically without ADC, so a
+the `npm run` scripts in the testing section. The jobs run hermetically without ADC, so a
 test that accidentally reaches `getAuthClient()` fails fast with a named
 error rather than hanging on metadata-server discovery. The workflow lives
 at [`.github/workflows/node.js.yml`](.github/workflows/node.js.yml).
