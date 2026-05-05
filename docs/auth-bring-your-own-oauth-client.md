@@ -14,51 +14,58 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Bring Your Own OAuth Client
+# Bring your own OAuth client
 
-`mcp auth login` uses an OAuth client to obtain a Google access token. The
-bundled managed client is not yet provisioned. Until provisioning lands, BYO
-is required: set `CEP_OAUTH_CLIENT_ID` and `CEP_OAUTH_CLIENT_SECRET` in your
-environment.
+To run `mcp auth login`, you need a Google OAuth client. Until Google provisions a managed client for this project, you must supply your own. Set `CEP_OAUTH_CLIENT_ID` and `CEP_OAUTH_CLIENT_SECRET` in your environment to point at a Desktop OAuth client that you create in your Google Cloud project.
 
-Cache file: `~/.config/cep-mcp/tokens.json` (mode 0600). Contents: access
-token only; no refresh token. Access-token TTL: about one hour.
+When you log in, the CLI writes an access token to `~/.config/cep-mcp/tokens.json` with file mode `0600`. The cache contains the access token only—no refresh token—and the access token expires after about an hour.
 
-## BYO Desktop OAuth client setup
+## Create a Desktop OAuth client
 
-1. In the Google Cloud Console, open APIs & Services → Credentials
-   (https://console.cloud.google.com/apis/credentials).
-2. Click Create Credentials → OAuth client ID.
-3. Application type: Desktop app. Name: anything you like.
-4. Click Create. Copy the Client ID and Client secret.
-5. Export them:
+Follow these steps to create a Desktop OAuth client and copy its credentials:
+
+1. Open the [Google Cloud console credentials page](https://console.cloud.google.com/apis/credentials).
+2. Click **Create credentials**.
+3. Select **OAuth client ID**.
+4. In the **Application type** menu, select **Desktop app**.
+5. In the **Name** field, enter a descriptive name.
+6. Click **Create**.
+7. From the dialog, copy the client ID and the client secret.
+
+## Sign in for the first time
+
+Follow these steps to authenticate the CLI with the OAuth client you created:
+
+1. Export the credentials in your shell. Replace `CLIENT_ID` and `CLIENT_SECRET` with the values you copied:
 
    ```bash
-   export CEP_OAUTH_CLIENT_ID="<your client id>"
-   export CEP_OAUTH_CLIENT_SECRET="<your client secret>"
+   export CEP_OAUTH_CLIENT_ID="CLIENT_ID"
+   export CEP_OAUTH_CLIENT_SECRET="CLIENT_SECRET"
    ```
 
-6. Run `mcp auth login`. Approve consent in the browser.
-7. Verify with `mcp auth-status`.
+2. Run `mcp auth login`.
+3. Approve consent in the browser that the CLI opens.
+4. Verify the cache by running `mcp auth-status`.
 
-## Headless paste-back path
+## Sign in from a host without a browser
 
-For CI, SSH sessions, or containers without a browser:
+Use this path for continuous integration runners, SSH sessions, and containers without a local browser.
 
-1. The CLI output has two parts: a consent URL on stderr, and a stdin prompt.
-2. Open the URL on another machine. Approve consent.
-3. The redirect target is `http://127.0.0.1:<port>/?code=...`. That URL is
-   unreachable from a remote browser; the page is connection-refused or 404
-   (expected).
-4. Copy the full URL from the browser address bar. Paste at the CLI prompt.
-5. Result: token cache at `~/.config/cep-mcp/tokens.json`.
+Follow these steps to sign in by pasting the redirect URL from a different machine:
 
-## Required scopes
+1. Run `mcp auth login`. The CLI prints a consent URL to standard error.
+2. Copy the consent URL.
+3. Open the URL in a browser on a machine that has one, such as your laptop.
+4. Approve consent on the Google consent screen.
+5. Copy the full redirect URL from the browser address bar, including the `code=` parameter.
+6. Paste the redirect URL at the CLI's stdin prompt.
 
-Source of truth: `lib/constants.js#SCOPES`. The OAuth consent screen has every
-entry. Granted scopes are in the cache; `mcp auth-status` is the readout.
+**Note:** After approval, the browser fetches `http://127.0.0.1:<port>/?code=...` and shows "connection refused" or 404. This is expected; the loopback address points to the host running the CLI, not the host with the browser. The redirect URL with the `code=` parameter is in the address bar regardless.
 
-## Token expiry
+## Scopes
 
-Access-token TTL: about one hour. The cache has no refresh token, so an
-expired token gets a 401 from Google. The remedy is `mcp auth login` again.
+When you log in, the CLI requests every scope listed in `lib/constants.js#SCOPES`. To see which scopes the cached token actually granted, run `mcp auth-status`.
+
+## Refresh expired tokens
+
+The access token expires after about an hour. The cache holds no refresh token, so the next Google API call returns `401 Unauthorized`. Run `mcp auth login` again to mint a new access token.
