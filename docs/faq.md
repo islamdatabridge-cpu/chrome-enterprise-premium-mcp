@@ -30,7 +30,7 @@ The right path depends on your environment.
 
 - **Workstation, gcloud installed, you are a Google Cloud admin for the project:** Application Default Credentials. Run `gcloud auth application-default login` per the [Quick Start](../README.md#1-authenticate-with-google-cloud).
 - **Workstation, no gcloud or you are not a Google Cloud admin:** OAuth login. Run `mcp auth login`. For the setup walkthrough, see [`auth-bring-your-own-oauth-client.md`](auth-bring-your-own-oauth-client.md).
-- **Hosted (Cloud Run, Vertex AI Agent Engine, and similar):** OAuth bearer per request. The caller sets `Authorization: Bearer <id-token>` and the server verifies the token's `aud` claim against `CEP_BEARER_AUDIENCE`. A service account with domain-wide delegation is the alternative; for new hosted deployments, OAuth is preferred because a service account with domain-wide delegation grants the server impersonation rights for any user in the domain.
+- **Hosted on Cloud Run, Vertex AI Agent Engine, or a similar managed environment:** OAuth bearer per request. The caller sets `Authorization: Bearer <id-token>` and the server verifies the token's `aud` claim against `CEP_BEARER_AUDIENCE`. A service account with domain-wide delegation is the alternative. OAuth is preferred for hosted deployments because a service account with domain-wide delegation grants the server impersonation rights for any user in the domain.
 
 For the per-mechanism technical reference (transport, credential source, setup walkthrough), see the [authentication matrix](configuration.md#authenticate-to-google-apis) in `configuration.md`.
 

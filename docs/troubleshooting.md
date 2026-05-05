@@ -82,7 +82,7 @@ These warnings are harmless. Some Node.js features used by dependencies emit war
 
 ### Wrong Node version
 
-The server requires Node 18 or later. Check with `node --version`. If you use [nvm](https://github.com/nvm-sh/nvm), run `nvm use 18` (or later) in the project directory. MCP clients launch `node` as a subprocess and use whatever `node` is on the system PATH, which can differ from the version your shell's `nvm` is currently selecting.
+The server requires Node 18 or later. Check with `node --version`. If you use [nvm](https://github.com/nvm-sh/nvm), run `nvm use 18` (or later) in the project directory. MCP clients launch `node` as a subprocess and use whatever `node` is on the system PATH, which can differ from the version your shell's `nvm` selects.
 
 ## MCP client integration
 
@@ -91,10 +91,10 @@ The server requires Node 18 or later. Check with `node --version`. If you use [n
 Try these in order.
 
 1. **Restart the client** after editing its config file. Most clients do not hot-reload MCP configuration.
-2. **Run the client's MCP-reload command.** In Gemini CLI, type `/mcp` and reload. Some clients pick up new tool registrations only after an explicit reload, even after a restart.
+2. **Run the client's MCP-reload command.** Some clients pick up tool registrations only after an explicit reload, even after a restart. Consult your client's documentation for the reload command.
 3. **Use absolute paths.** The `args` path in your config must be absolute. Relative paths resolve from the client's working directory, which is unpredictable.
-4. **Check that the client can find `node`.** GUI apps such as Claude Desktop and VS Code may not inherit your shell PATH. Try the full path to node, for example `"command": "/usr/local/bin/node"`. Find yours with `which node`.
-5. **Test the server manually.** Run `npx -y @google/chrome-enterprise-premium-mcp@latest` in a terminal. You should see `[mcp] Chrome Enterprise Premium MCP server stdio transport connected` on standard error. If you see errors, fix those first.
+4. **Check that the client can find `node`.** Graphical-interface clients might not inherit your shell PATH. Try the full path to node, for example `"command": "/usr/local/bin/node"`. Find yours with `which node`.
+5. **Test the server manually.** Run `npx -y @google/chrome-enterprise-premium-mcp@latest` in a terminal. The server prints `[mcp] Chrome Enterprise Premium MCP server stdio transport connected` on standard error. If you see errors, fix those first.
 
 ### Server starts but immediately exits
 
