@@ -24,13 +24,12 @@ When you log in, the CLI writes an access token to `~/.config/cep-mcp/tokens.jso
 
 Follow these steps to create a Desktop OAuth client and copy its credentials:
 
-1. Open the [Google Cloud console credentials page](https://console.cloud.google.com/apis/credentials).
-2. Click **Create credentials**.
-3. Select **OAuth client ID**.
-4. In the **Application type** menu, select **Desktop app**.
-5. In the **Name** field, enter a descriptive name.
-6. Click **Create**.
-7. From the dialog, copy the client ID and the client secret.
+1. Open the [Google Cloud console Clients page](https://console.cloud.google.com/auth/clients).
+2. Click **Create client**.
+3. In the **Application type** menu, select **Desktop app**.
+4. In the **Name** field, enter a descriptive name.
+5. Click **Create**.
+6. From the **OAuth client created** dialog, copy the client ID and the client secret.
 
 ## Sign in for the first time
 
@@ -64,7 +63,7 @@ Follow these steps to sign in by pasting the redirect URL from a different machi
 
 ## Scopes
 
-When you log in, the CLI requests every scope listed in `lib/constants.js#SCOPES`. To see which scopes the cached token actually granted, run `mcp auth-status`.
+When you log in, the CLI requests every scope listed in `lib/constants.js#OAUTH_SCOPES`. That set is `SCOPES` minus `cloud-platform`, so the consent screen shows the narrower per-API scopes the server actually uses. To see which scopes the cached token actually granted, run `mcp auth-status`.
 
 ## Refresh expired tokens
 
