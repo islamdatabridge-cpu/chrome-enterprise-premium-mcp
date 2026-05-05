@@ -55,7 +55,7 @@ jobs:
         if: hashFiles('results/eval-baseline.json') != ''
         run: |
           set +e
-          node scripts/eval-diff.js results/eval-baseline.json results/eval-latest.json \
+          node test/evals/diff.js results/eval-baseline.json results/eval-latest.json \
             | tee diff-output.txt \
             | tee -a "$GITHUB_STEP_SUMMARY"
           echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
