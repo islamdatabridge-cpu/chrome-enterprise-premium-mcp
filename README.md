@@ -88,6 +88,10 @@ gcloud auth application-default set-quota-project YOUR_PROJECT_ID
 >
 > **The quota project is required.** Without it you'll see a "quota project
 > not set" error on the first API call.
+>
+> **Restricted Workspace environments:** If your organization restricts third-party
+> app access, an admin must [trust the gcloud OAuth app](docs/troubleshooting.md#configure-oauth-app-for-sensitive-scopes)
+> before you can authenticate with sensitive Workspace scopes.
 
 ### 2. Enable Required APIs
 
@@ -218,6 +222,7 @@ For environment variables and stdio vs. HTTP transport, see
 | **Google Workspace** | Any edition, plus a [Chrome Enterprise Premium](https://docs.cloud.google.com/chrome-enterprise-premium/docs/overview) license ([60-day free trial available](https://docs.cloud.google.com/chrome-enterprise-premium/docs/overview)) |
 | **Admin role**       | Google Workspace Super Admin, or a delegated admin with Chrome Management and DLP permissions                                                                                                                                         |
 | **GCP project**      | Linked to your Workspace domain, with required APIs enabled                                                                                                                                                                           |
+| **OAuth App Trust**  | The gcloud CLI must be [trusted in the Admin Console](docs/troubleshooting.md#configure-oauth-app-for-sensitive-scopes) for sensitive scopes.                                                                                         |
 
 > **GCP IAM is not enough.** Chrome Management and Admin SDK APIs require a
 > Google Workspace admin role _in addition to_ GCP IAM roles. The user must hold
