@@ -52,7 +52,20 @@ Replace `YOUR_PROJECT_ID` with your Google Cloud project ID. If you do not know 
 
 Cached credentials are stale. Common causes are a password change, an admin revoking access, MFA re-enrollment, or the token expiring after seven days of inactivity. Delete `~/.config/gcloud/application_default_credentials.json` and re-authenticate.
 
-### `gcloud` is installed but `gcloud auth` fails
+### Configure OAuth app for sensitive scopes
+
+This step is required because Chrome Enterprise Premium requests access to
+sensitive scopes, so the gcloud OAuth app needs to be explicitly
+allow-listed.
+
+1.  Go to [App Access Control](https://admin.google.com/ac/owl/list?tab=configuredApps) in the Admin Console. Check that you are logged in with the right account via upper-right account icon.
+2.  Click **Configure new app** and select **OAuth App Name Or Client ID**.
+3.  Search for the OAuth app ID: `764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com`.
+4.  Select the **Google Cloud SDK** app from the results.
+5.  Check the box for the **OAuth Client ID** and click **Select**.
+6.  Select **Trusted: Can access all Google services** for Access to Google Data and click **Configure**.
+
+### `gcloud` is installed but `gcloud auth` fails with "command not found"
 
 Your shell can find a `gcloud` binary but the auth subcommand does not run as expected. Check that `which gcloud` points at the binary you intend, and confirm with `gcloud version` that the install is recent. If the install looks broken, reinstall the Cloud SDK from the [official installer](https://docs.cloud.google.com/sdk/docs/install).
 
