@@ -52,10 +52,10 @@ jobs:
       # the workflow just produces and uploads results.
       - name: Diff vs baseline
         id: diff
-        if: hashFiles('results/eval-baseline.json') != ''
+        if: hashFiles('test/evals/baseline.json') != ''
         run: |
           set +e
-          node test/evals/diff.js results/eval-baseline.json results/eval-latest.json \
+          node test/evals/diff.js test/evals/baseline.json results/eval-latest.json \
             | tee diff-output.txt \
             | tee -a "$GITHUB_STEP_SUMMARY"
           echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"

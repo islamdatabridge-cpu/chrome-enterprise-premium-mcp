@@ -15,8 +15,7 @@ node_modules
 coverage/
 
 # Eval results
-results/*
-!results/eval-baseline.json
+results/
 eval_results*
 results*.json
 
