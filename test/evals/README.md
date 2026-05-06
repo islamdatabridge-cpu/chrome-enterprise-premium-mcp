@@ -312,18 +312,26 @@ response text, and timing. CI systems can parse this for reporting.
 
 ## Drift detection
 
-The `Agent Evals` workflow (`.github/workflows/agent-evals.yml`) runs daily on
-cron and on `workflow_dispatch`. It produces `results/eval-latest.json` and
-diffs it against a checked-in baseline at `test/evals/baseline.json`.
+The GitHub Actions workflow defined in `.github/workflows/agent-evals.yml`
+runs the eval suite on a daily schedule (11:00 UTC) and on manual dispatch.
+After each run completes, the full set of results is written to
+`results/eval-latest.json` and uploaded as a workflow artifact.
 
-`test/evals/diff.js` compares the two files and exits non-zero when the
-overall pass rate drops by more than 5% (configurable via `--threshold`). On
-regression, the workflow opens (or comments on the existing) `Eval drift
-detected` issue tagged with the `auto:evals` label and fails the run. Runs
-flagged INCONCLUSIVE (transient error share above 20%) skip the comparison so
-flaky API responses don't trigger false drift alerts.
+Regressions are detected by `test/evals/diff.js`, which compares the latest
+results against the checked-in baseline at `test/evals/baseline.json`. The
+script exits with status code 1 when the overall pass rate has fallen by
+more than 5%; the threshold is configurable through the `--threshold` flag.
 
-The diff script is also runnable locally:
+When a regression is reported, an issue titled `Eval drift detected` is
+opened under the `auto:evals` label. If such an issue is already open, a new
+comment is appended to it instead. The workflow run itself is then marked as
+failed.
+
+When transient errors account for more than 20% of cases, the run is
+classified as INCONCLUSIVE and the diff step is skipped. This prevents a
+flaky upstream API from being mistaken for a real regression.
+
+You can run the same diff locally:
 
 ```bash
 node test/evals/diff.js test/evals/baseline.json results/eval-latest.json
@@ -331,15 +339,19 @@ node test/evals/diff.js test/evals/baseline.json results/eval-latest.json
 
 ### Updating the baseline
 
-Refresh the baseline when an intentional improvement bumps the pass rate.
-Pull the artifact from a clean run on `main`, copy it into place, and commit:
+Refresh the baseline whenever the pass rate on `main` has been deliberately
+improved — for example, after a system-prompt change or after new evals have
+been added to the suite. The procedure is to download the artifact from a
+green workflow run on `main`, copy `eval-latest.json` over the existing
+baseline file, and commit the result:
 
 ```bash
 gh run download <RUN_ID> --repo google/chrome-enterprise-premium-mcp --dir /tmp/eval-artifact
 cp /tmp/eval-artifact/eval-results/eval-latest.json test/evals/baseline.json
 ```
 
-The next cron + `workflow_dispatch` run picks up the new baseline.
+Once the updated baseline is on `main`, subsequent scheduled and manually
+dispatched runs are compared against it.
 
 ## Writing new evals
 
