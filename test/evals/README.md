@@ -310,6 +310,37 @@ response text, and timing. CI systems can parse this for reporting.
 
 **Exit code**: 0 if all evals pass, 1 if any fail.
 
+## Drift detection
+
+The `Agent Evals` workflow (`.github/workflows/agent-evals.yml`) runs daily on
+cron and on `workflow_dispatch`. It produces `results/eval-latest.json` and
+diffs it against a checked-in baseline at `test/evals/baseline.json`.
+
+`test/evals/diff.js` compares the two files and exits non-zero when the
+overall pass rate drops by more than 5% (configurable via `--threshold`). On
+regression, the workflow opens (or comments on the existing) `Eval drift
+detected` issue tagged with the `auto:evals` label and fails the run. Runs
+flagged INCONCLUSIVE (transient error share above 20%) skip the comparison so
+flaky API responses don't trigger false drift alerts.
+
+The diff script is also runnable locally:
+
+```bash
+node test/evals/diff.js test/evals/baseline.json results/eval-latest.json
+```
+
+### Updating the baseline
+
+Refresh the baseline when an intentional improvement bumps the pass rate.
+Pull the artifact from a clean run on `main`, copy it into place, and commit:
+
+```bash
+gh run download <RUN_ID> --repo google/chrome-enterprise-premium-mcp --dir /tmp/eval-artifact
+cp /tmp/eval-artifact/eval-results/eval-latest.json test/evals/baseline.json
+```
+
+The next cron + `workflow_dispatch` run picks up the new baseline.
+
 ## Writing new evals
 
 1. Create a `.md` file in the appropriate `cases/<category>/` directory.
