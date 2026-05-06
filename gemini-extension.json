@@ -2,23 +2,11 @@
   "name": "chrome-enterprise-premium",
   "version": "1.2.0",
   "description": "Bring AI agents to Chrome Enterprise Premium security management.",
-  "contextFileName": "gemini-extension/GEMINI.md",
+  "contextFileName": "gemini-extension/CONTEXT.md",
   "mcpServers": {
     "chrome-enterprise-premium": {
       "command": "npx",
       "args": ["-y", "@google/chrome-enterprise-premium-mcp@^1.2.0"]
     }
-  },
-  "oauth_scopes": [
-    "https://www.googleapis.com/auth/admin.directory.customer.readonly",
-    "https://www.googleapis.com/auth/admin.directory.orgunit.readonly",
-    "https://www.googleapis.com/auth/admin.reports.audit.readonly",
-    "https://www.googleapis.com/auth/apps.licensing",
-    "https://www.googleapis.com/auth/chrome.management.policy",
-    "https://www.googleapis.com/auth/chrome.management.profiles.readonly",
-    "https://www.googleapis.com/auth/chrome.management.reports.readonly",
-    "https://www.googleapis.com/auth/cloud-identity.policies",
-    "https://www.googleapis.com/auth/service.management",
-    "https://www.googleapis.com/auth/userinfo.email"
-  ]
+  }
 }
