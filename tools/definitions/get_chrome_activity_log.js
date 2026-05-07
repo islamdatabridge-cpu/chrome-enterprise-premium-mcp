@@ -41,7 +41,7 @@ export function registerGetChromeActivityLogTool(server, options, sessionState) 
     'get_chrome_activity_log',
     {
       description: `Retrieves audit logs of Chrome browser activity (e.g., login events, policy violations, extension installs).
-Use this for security investigations and auditing user actions within the managed browser environment.`,
+Use this for security investigations, auditing user actions, and to help tune DLP rules.`,
       inputSchema: {
         userKey: z.string().describe(`The user key to get activities for. Use "all" for all users.`).default('all'),
         eventName: z.string().optional().describe(`The name of the event to filter by.`),
