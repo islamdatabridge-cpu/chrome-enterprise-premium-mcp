@@ -439,13 +439,11 @@ export async function runServer() {
 
       app.get('/mcp', async (_req, res) => {
         logger.info(`${TAGS.MCP} Received GET MCP request`)
-        res.writeHead(405).end(
-          JSON.stringify({
-            jsonrpc: '2.0',
-            error: { code: -32000, message: 'Method not allowed.' },
-            id: null,
-          }),
-        )
+        res.status(405).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Method not allowed.' },
+          id: null,
+        })
       })
 
       const sseTransports = {}
@@ -465,7 +463,11 @@ export async function runServer() {
           // response body and trip the reflected-XSS detector regardless of
           // the response content type.
           logger.warn(`${TAGS.MCP} /messages: no transport found for sessionId: ${String(sessionId)}`)
-          res.status(400).send('No transport found for the provided sessionId')
+          res.status(400).json({
+            jsonrpc: '2.0',
+            error: { code: -32000, message: 'No transport found for the provided sessionId.' },
+            id: null,
+          })
         }
       })
 

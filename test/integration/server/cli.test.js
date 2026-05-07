@@ -27,6 +27,21 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CLI = path.resolve(__dirname, '../../../bin/cli.js')
 
+async function captureConsoleLogs(fn) {
+  const lines = []
+  const origLog = console.log
+  console.log = msg => {
+    lines.push(msg)
+  }
+  try {
+    await fn()
+  } finally {
+    // eslint-disable-next-line require-atomic-updates
+    console.log = origLog
+  }
+  return lines
+}
+
 describe('bin/cli.js', () => {
   describe('auth-status', () => {
     it('When invoked with auth-status and ADC absent, then it prints the ADC line and an OAuth flow line', () => {
@@ -50,19 +65,9 @@ describe('runLoginCommand', () => {
     const credentialFactory = mock.fn(() => ({ runLoginFlow }))
     const configResolver = mock.fn(() => ({ source: 'managed', clientId: '', clientSecret: '' }))
 
-    const lines = []
-
-    const origLog = console.log
-
-    console.log = msg => {
-      lines.push(msg)
-    }
-    try {
+    const lines = await captureConsoleLogs(async () => {
       await runLoginCommand({ credentialFactory, configResolver })
-    } finally {
-      // eslint-disable-next-line require-atomic-updates
-      console.log = origLog
-    }
+    })
 
     assert.equal(credentialFactory.mock.calls.length, 1)
     assert.equal(runLoginFlow.mock.calls.length, 1)
@@ -82,19 +87,9 @@ describe('runLoginCommand BYO notice', () => {
       clientSecret: '',
     }))
 
-    const lines = []
-
-    const origLog = console.log
-
-    console.log = msg => {
-      lines.push(msg)
-    }
-    try {
+    const lines = await captureConsoleLogs(async () => {
       await runLoginCommand({ credentialFactory, configResolver })
-    } finally {
-      // eslint-disable-next-line require-atomic-updates
-      console.log = origLog
-    }
+    })
 
     const noticePresent = lines.some(l => /Custom OAuth client detected/i.test(l))
     assert.equal(noticePresent, false)
@@ -107,33 +102,26 @@ describe('runLoginCommand BYO notice', () => {
     const path = await import('node:path')
 
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cep-mcp-test-'))
-    const noticePath = path.join(tmpDir, 'byo-notice.shown')
-
-    const runLoginFlow = mock.fn(async () => {})
-    const credentialFactory = mock.fn(() => ({ runLoginFlow }))
-    const configResolver = mock.fn(() => ({
-      source: 'custom',
-      clientId: 'test',
-      clientSecret: 'test',
-    }))
-
-    const lines = []
-
-    const origLog = console.log
-
-    console.log = msg => {
-      lines.push(msg)
-    }
     try {
-      await runLoginCommand({ credentialFactory, noticePath, configResolver })
+      const noticePath = path.join(tmpDir, 'byo-notice.shown')
+
+      const runLoginFlow = mock.fn(async () => {})
+      const credentialFactory = mock.fn(() => ({ runLoginFlow }))
+      const configResolver = mock.fn(() => ({
+        source: 'custom',
+        clientId: 'test',
+        clientSecret: 'test',
+      }))
+
+      const lines = await captureConsoleLogs(async () => {
+        await runLoginCommand({ credentialFactory, noticePath, configResolver })
+      })
+
+      const noticePresent = lines.some(l => /Custom OAuth client detected/i.test(l))
+      assert.equal(noticePresent, true)
     } finally {
-      // eslint-disable-next-line require-atomic-updates
-      console.log = origLog
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
-
-    const noticePresent = lines.some(l => /Custom OAuth client detected/i.test(l))
-    assert.equal(noticePresent, true)
   })
 
   it('When source is custom and marker exists, then notice does not print', async () => {
@@ -143,36 +131,29 @@ describe('runLoginCommand BYO notice', () => {
     const path = await import('node:path')
 
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cep-mcp-test-'))
-    const noticePath = path.join(tmpDir, 'byo-notice.shown')
-
-    // Pre-create marker
-    await fs.mkdir(path.dirname(noticePath), { recursive: true })
-    await fs.writeFile(noticePath, new Date().toISOString())
-
-    const runLoginFlow = mock.fn(async () => {})
-    const credentialFactory = mock.fn(() => ({ runLoginFlow }))
-    const configResolver = mock.fn(() => ({
-      source: 'custom',
-      clientId: 'test',
-      clientSecret: 'test',
-    }))
-
-    const lines = []
-
-    const origLog = console.log
-
-    console.log = msg => {
-      lines.push(msg)
-    }
     try {
-      await runLoginCommand({ credentialFactory, noticePath, configResolver })
+      const noticePath = path.join(tmpDir, 'byo-notice.shown')
+
+      // Pre-create marker
+      await fs.mkdir(path.dirname(noticePath), { recursive: true })
+      await fs.writeFile(noticePath, new Date().toISOString())
+
+      const runLoginFlow = mock.fn(async () => {})
+      const credentialFactory = mock.fn(() => ({ runLoginFlow }))
+      const configResolver = mock.fn(() => ({
+        source: 'custom',
+        clientId: 'test',
+        clientSecret: 'test',
+      }))
+
+      const lines = await captureConsoleLogs(async () => {
+        await runLoginCommand({ credentialFactory, noticePath, configResolver })
+      })
+
+      const noticePresent = lines.some(l => /Custom OAuth client detected/i.test(l))
+      assert.equal(noticePresent, false)
     } finally {
-      // eslint-disable-next-line require-atomic-updates
-      console.log = origLog
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
-
-    const noticePresent = lines.some(l => /Custom OAuth client detected/i.test(l))
-    assert.equal(noticePresent, false)
   })
 })
