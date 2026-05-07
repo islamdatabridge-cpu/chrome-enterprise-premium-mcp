@@ -46,6 +46,7 @@ import { logger } from './lib/util/logger.js'
 import { printBanner, dim } from './lib/util/banner.js'
 import { buildScopesField, buildAuthRemediationLines, buildQuotaProjectWarning } from './lib/util/auth_messages.js'
 import { verifyIdToken, parseExpectedAudience } from './lib/util/credential/jwt_verifier.js'
+import { verifyBearerToken } from './lib/util/credential/bearer_verifier.js'
 import { TAGS, SCOPES } from './lib/constants.js'
 
 // Import Real Clients
@@ -430,22 +431,21 @@ export async function runServer() {
             return
           }
           const token = auth.slice(7).trim()
-          try {
-            const principal = await verifyIdToken(token, { expectedAudience })
-            if (lockedSub && principal.sub !== lockedSub) {
+          const result = await verifyBearerToken(token, { expectedAudience, lockedSub, verify: verifyIdToken })
+          if (!result.ok) {
+            if (result.status === 403) {
               logger.warn(
-                `${TAGS.MCP} Principal sub ${principal.sub} does not match CEP_BEARER_PRINCIPAL_SUB; rejecting`,
+                `${TAGS.MCP} Principal sub ${result.principal.sub} does not match CEP_BEARER_PRINCIPAL_SUB; rejecting`,
               )
-              res.status(403).json({ error: 'Principal not authorized for this deployment' })
-              return
+            } else if (result.error) {
+              logger.warn(`${TAGS.MCP} ID-token verification failed: ${result.error.message}`)
             }
-            // eslint-disable-next-line require-atomic-updates
-            req.verifiedPrincipal = principal
-            next()
-          } catch (err) {
-            logger.warn(`${TAGS.MCP} ID-token verification failed: ${err.message}`)
-            res.status(401).json({ error: 'Bearer token verification failed' })
+            res.status(result.status).json({ error: result.message })
+            return
           }
+          // eslint-disable-next-line require-atomic-updates
+          req.verifiedPrincipal = result.principal
+          next()
         })
       } else {
         logger.warn(
