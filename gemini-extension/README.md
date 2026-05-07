@@ -16,22 +16,25 @@ limitations under the License.
 
 # gemini-extension
 
-`GEMINI.md` is the grounding context [Gemini CLI](https://github.com/google-gemini/gemini-cli)
+`CONTEXT.md` is the grounding context [Gemini CLI](https://github.com/google-gemini/gemini-cli)
 prepends to every agent session when a user installs this repo as an
 extension. It sets the agent's persona, the operating protocol it
 follows, and the technical anchors (pricing, IAM roles, deployment
-commands) we want it to cite when answering CEP questions.
+commands) the agent should cite when answering CEP questions.
+
+The file is intentionally **not** named `GEMINI.md`: that name would
+collide with Gemini CLI's workspace context loader if a contributor ran
+`gemini` inside this repo, mixing the end-user CEP persona with their
+coding session. Gemini CLI loads `CONTEXT.md` only via the explicit
+manifest path below, not via the workspace scanner.
 
 The extension manifest at the repo root
-([`gemini-extension.json`](../gemini-extension.json)) points at this
-file, declares the OAuth scopes Gemini CLI prompts for at install
-time, and tells Gemini CLI to launch `mcp-server.js` as the MCP
-backend.
+([`gemini-extension.json`](../gemini-extension.json)) points at it and
+tells Gemini CLI to launch `mcp-server.js` as the MCP backend.
 
-> **`oauth_scopes` is install-time only.** The list lives in the
-> manifest so the Gemini CLI extension installer has the right consent
-> screen during `gemini extension install`. The MCP server's runtime
-> scope sets live separately in `lib/constants.js`: `SCOPES` is the
-> full ADC set (including `cloud-platform`); `OAUTH_SCOPES` is the
-> narrower set the OAuth-flow login uses on the consent screen.
-> Updating any of the three lists without the others is a real foot-gun.
+`lib/constants.js` defines two OAuth scope sets:
+
+- **`SCOPES`:** every scope the server uses via ADC, including
+  `cloud-platform`.
+- **`OAUTH_SCOPES`:** `SCOPES` minus `cloud-platform`. The OAuth-flow
+  login uses this on the consent screen.
