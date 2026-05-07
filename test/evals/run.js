@@ -218,6 +218,7 @@ async function main() {
 
     try {
       harness = await createIntegrationHarness({
+        backend,
         featureFlags: caseFeatureFlags,
         ...(localFakeServer ? { rootUrl: localFakeServer.url } : {}),
       })
