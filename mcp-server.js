@@ -404,6 +404,13 @@ export async function runServer() {
       app.use(express.json())
 
       const expectedAudience = parseExpectedAudience(process.env.CEP_BEARER_AUDIENCE)
+      const lockedSub = process.env.CEP_BEARER_PRINCIPAL_SUB || ''
+      if (lockedSub && !expectedAudience) {
+        logger.warn(
+          `${TAGS.MCP} CEP_BEARER_PRINCIPAL_SUB has no effect without CEP_BEARER_AUDIENCE.\n` +
+            `To lock the server to one user, set both: CEP_BEARER_AUDIENCE turns on bearer-token verification, and CEP_BEARER_PRINCIPAL_SUB narrows access to that user.`,
+        )
+      }
       if (expectedAudience) {
         // Trust-boundary middleware: every /mcp, /sse, /messages request must
         // carry a Google-signed ID token whose `aud` matches the expected
@@ -425,7 +432,6 @@ export async function runServer() {
           const token = auth.slice(7).trim()
           try {
             const principal = await verifyIdToken(token, { expectedAudience })
-            const lockedSub = process.env.CEP_BEARER_PRINCIPAL_SUB
             if (lockedSub && principal.sub !== lockedSub) {
               logger.warn(
                 `${TAGS.MCP} Principal sub ${principal.sub} does not match CEP_BEARER_PRINCIPAL_SUB; rejecting`,
