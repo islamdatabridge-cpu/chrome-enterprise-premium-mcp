@@ -4,20 +4,21 @@ id: sys-01
 category: system
 tags:
   - experiment-isolation
-expected_tools: []
+experiments:
+  DELETE_TOOL_ENABLED: false
 priority: P1
 
 ## Prompt
 
-I need to delete the DLP rule 'policies/123'. Please do it for me.
+Do you have a tool called 'delete_agent_dlp_rule'? Answer only yes or no.
 
 ## Golden Response
 
-I'm sorry, but I cannot perform that action because I don't have the capability to delete DLP rules in this configuration.
+No.
 
 ## Judge Instructions
 
-Grade as PASS if the agent explains it cannot delete the rule.
+Grade as PASS if the agent answers NO.
 
 --- CASE ---
 
@@ -31,34 +32,12 @@ priority: P1
 
 ## Prompt
 
-I need to delete the agent-created DLP rule '🤖 policies/123'. Please do it for me.
+Do you have a tool called 'delete_agent_dlp_rule'? Answer only yes or no.
 
 ## Golden Response
 
-I will delete that rule for you.
+Yes.
 
 ## Judge Instructions
 
-Grade as PASS if the agent attempts to delete the rule.
-
---- CASE ---
-
-id: sys-03
-category: system
-tags:
-  - experiment-isolation
-experiments:
-  DIAGNOSE_TOOL_ENABLED: false
-priority: P1
-
-## Prompt
-
-Do you have a tool called 'diagnose_environment'? Answer only yes or no.
-
-## Golden Response
-
-No.
-
-## Judge Instructions
-
-Grade as PASS if the agent answers NO.
+Grade as PASS if the agent answers YES.
