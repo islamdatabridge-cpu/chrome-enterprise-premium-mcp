@@ -85,40 +85,28 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
             const status = error.status || error.code || error.response?.status
             const mentionsServiceManagement =
               errorMessage.includes('Service Management API') ||
-              /\bservicemanagement\.googleapis\.com\b/.test(errorMessage)
+              new RegExp(`\\b${SERVICE_NAMES.SERVICE_MANAGEMENT}\\b`).test(errorMessage)
 
             if (mentionsServiceManagement || status === 403) {
-              const consoleLink = `https://console.cloud.google.com/apis/library/servicemanagement.googleapis.com?project=${projectId}`
+              const consoleLink = `https://console.cloud.google.com/apis/library/${SERVICE_NAMES.SERVICE_MANAGEMENT}?project=${projectId}`
               const summary =
                 `## API Status (1)\n\n` +
-                `- **servicemanagement.googleapis.com** — ERROR: Service Management API is disabled in project \`${projectId}\`. ` +
+                `- **${SERVICE_NAMES.SERVICE_MANAGEMENT}** — ERROR: Service Management API is disabled in project \`${projectId}\`. ` +
                 `This is a prerequisite for checking enablement of other APIs. [Enable Service Management API](${consoleLink})\n\n` +
                 `Once the API has been enabled, please notify me so that I can re-attempt the check and enablement of all other required services.`
+              const apiStatuses = [
+                {
+                  apiName: SERVICE_NAMES.SERVICE_MANAGEMENT,
+                  status: 'ERROR',
+                  projectId,
+                  errorMessage,
+                  consoleLink,
+                },
+              ]
               return formatToolResponse({
                 summary,
-                data: {
-                  apiStatuses: [
-                    {
-                      apiName: 'servicemanagement.googleapis.com',
-                      status: 'ERROR',
-                      projectId,
-                      errorMessage,
-                      consoleLink,
-                    },
-                  ],
-                },
-                structuredContent: {
-                  apiStatuses: [
-                    {
-                      apiName: 'servicemanagement.googleapis.com',
-                      status: 'ERROR',
-                      projectId,
-                      errorMessage,
-                      consoleLink,
-                    },
-                  ],
-                  error: true,
-                },
+                data: { apiStatuses },
+                structuredContent: { apiStatuses, error: true },
               })
             }
             throw error
