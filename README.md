@@ -43,15 +43,15 @@ npm install
 Run `mcp auth login` and approve consent in the browser. The CLI caches
 the access token at `~/.config/cep-mcp/tokens.json`.
 
-If you'd rather keep authorization grants and the consent screen inside a
-Google Cloud project you own, provide `CEP_OAUTH_CLIENT_ID` and
-`CEP_OAUTH_CLIENT_SECRET` instead. The
-[Bring your own OAuth client](docs/auth-bring-your-own-oauth-client.md)
-guide walks through creating the OAuth client and registering its redirect URIs.
+To keep authorization grants and the consent screen inside a Google Cloud
+project you own, provide `CEP_OAUTH_CLIENT_ID` and `CEP_OAUTH_CLIENT_SECRET`
+instead. For the steps to create the OAuth client and register its redirect
+URIs, see
+[Bring your own OAuth client](docs/auth-bring-your-own-oauth-client.md).
 
-If you're signing in from a CI runner or an SSH session without a browser,
-[Sign in from a host without a browser](docs/auth-bring-your-own-oauth-client.md#sign-in-from-a-host-without-a-browser)
-covers the paste-the-redirect flow.
+For the paste-the-redirect flow used on CI runners and SSH sessions without
+a browser, see
+[Sign in from a host without a browser](docs/auth-bring-your-own-oauth-client.md#sign-in-from-a-host-without-a-browser).
 
 The scope set requested at consent maps to the underlying APIs:
 
@@ -158,7 +158,7 @@ Restart your MCP client, then ask:
 > "What Chrome Enterprise Premium tools do you have access to?"
 
 You should see the available tools listed in the response. If they don't
-appear, the [Troubleshooting](#troubleshooting) section covers the usual causes.
+appear, see [Troubleshooting](#troubleshooting) for the usual causes.
 
 ## Configuration
 

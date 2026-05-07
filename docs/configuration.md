@@ -68,7 +68,7 @@ The server resolves credentials in `lib/util/auth.js#getAuthClient` and tries ea
 
 Most workstation users want the OAuth flow. Most hosted deployments (Cloud Run, Vertex AI Agent Engine) want bearer pass-through. Service accounts cover the cases where neither fits.
 
-If you're not sure which path applies to you, the [Which auth path should I use?](faq.md#which-auth-path-should-i-use) FAQ entry walks through the common deployment shapes.
+If you're not sure which path applies to you, see the [Which auth path should I use?](faq.md#which-auth-path-should-i-use) FAQ entry for the common deployment shapes.
 
 | Setup                          | Transport | Credential source                           | Setup walkthrough                                                                               |
 | :----------------------------- | :-------- | :------------------------------------------ | :---------------------------------------------------------------------------------------------- |

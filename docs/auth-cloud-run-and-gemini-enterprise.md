@@ -26,7 +26,7 @@ The first part is the OAuth-handling layer. With Vertex AI Agent Engine, OAuth c
 
 The second part is inbound verification. In HTTP mode, set `CEP_BEARER_AUDIENCE` to the OAuth client ID you registered. With it set, every inbound request's `Authorization: Bearer <id-token>` is checked against that audience before any forward to Google, and failures return `401 Unauthorized`.
 
-If you want the full set of HTTP-mode variables, [`configuration.md`](configuration.md#authenticate-to-google-apis) lists them.
+For the full set of HTTP-mode variables, see [`configuration.md`](configuration.md#authenticate-to-google-apis).
 
 ### Cloud Run setup sketch
 
