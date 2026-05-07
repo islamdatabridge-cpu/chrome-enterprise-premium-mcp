@@ -355,6 +355,7 @@ describe('buildAuthRemediationLines', () => {
     const scopeArg = tokens[4].slice('--scopes='.length)
     const printedScopes = scopeArg.split(',')
 
+    // TODO(b/510465023): Update this list once the required scopes are finalized.
     const criticalScopes = [
       'https://www.googleapis.com/auth/apps.licensing',
       'https://www.googleapis.com/auth/chrome.management.policy',

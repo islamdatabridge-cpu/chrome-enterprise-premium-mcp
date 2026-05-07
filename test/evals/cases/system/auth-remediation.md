@@ -5,6 +5,7 @@ tags: [auth, remediation]
 priority: P0
 expected_tools: [list_org_units]
 required_patterns:
+  # TODO(b/510465023): Update this list once the required scopes are finalized.
   - "gcloud auth application-default login"
   - "--scopes"
   - "apps.licensing"
