@@ -85,5 +85,57 @@ describe('adcCredential', () => {
         GoogleAuth.prototype.getClient = origGetClient
       }
     })
+
+    it('When tokeninfo returns only one scope, then all other required scopes are reported as missing', async () => {
+      const origFetch = globalThis.fetch
+      globalThis.fetch = async url => {
+        if (typeof url === 'string' && url.includes('tokeninfo')) {
+          return new Response(
+            JSON.stringify({
+              email: 'test@example.com',
+              scope: SCOPES.EMAIL,
+            }),
+            { status: 200 },
+          )
+        }
+        return origFetch(url)
+      }
+
+      const { GoogleAuth } = await import('google-auth-library')
+      const origGetClient = GoogleAuth.prototype.getClient
+      GoogleAuth.prototype.getClient = async function () {
+        return {
+          getAccessToken: async () => ({ token: 'fake-token' }),
+          email: null,
+          constructor: { name: 'FakeClient' },
+        }
+      }
+
+      try {
+        const cred = adcCredential()
+        const probe = await cred.probe()
+        assert.equal(probe.scopesKnown, true)
+
+        // Explicitly verify that critical required scopes are reported as missing
+        assert.ok(
+          probe.missingScopes.includes(SCOPES.LICENSING),
+          `Scope apps.licensing (${SCOPES.LICENSING}) should be reported as missing`,
+        )
+        assert.ok(
+          probe.missingScopes.includes(SCOPES.CHROME_MANAGEMENT_POLICY),
+          `Scope chrome.management.policy (${SCOPES.CHROME_MANAGEMENT_POLICY}) should be reported as missing`,
+        )
+
+        const expectedMissing = Object.values(SCOPES).filter(s => s !== SCOPES.EMAIL)
+        for (const s of expectedMissing) {
+          assert.ok(probe.missingScopes.includes(s), `Scope ${s} should be reported as missing`)
+        }
+        assert.equal(probe.missingScopes.length, expectedMissing.length)
+      } finally {
+        // eslint-disable-next-line require-atomic-updates
+        globalThis.fetch = origFetch
+        GoogleAuth.prototype.getClient = origGetClient
+      }
+    })
   })
 })

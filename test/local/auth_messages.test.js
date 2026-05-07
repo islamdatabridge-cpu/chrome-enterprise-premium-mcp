@@ -348,6 +348,28 @@ describe('buildAuthRemediationLines', () => {
       )
     }
   })
+
+  test('When the command is shell-tokenized, then it explicitly contains all critical Chrome Enterprise Premium required scopes', () => {
+    const lines = buildAuthRemediationLines(adcMissing, REQUIRED)
+    const tokens = shellTokenize(lines.slice(1).join('\n'))
+    const scopeArg = tokens[4].slice('--scopes='.length)
+    const printedScopes = scopeArg.split(',')
+
+    const criticalScopes = [
+      'https://www.googleapis.com/auth/apps.licensing',
+      'https://www.googleapis.com/auth/chrome.management.policy',
+      'https://www.googleapis.com/auth/chrome.management.reports.readonly',
+      'https://www.googleapis.com/auth/chrome.management.profiles.readonly',
+      'https://www.googleapis.com/auth/admin.directory.orgunit.readonly',
+      'https://www.googleapis.com/auth/admin.directory.customer.readonly',
+      'https://www.googleapis.com/auth/cloud-identity.policies',
+      'https://www.googleapis.com/auth/service.management',
+    ]
+
+    for (const scope of criticalScopes) {
+      assert.ok(printedScopes.includes(scope), `Remediation command is missing critical required scope: ${scope}`)
+    }
+  })
 })
 
 describe('buildOAuthClientField', () => {
