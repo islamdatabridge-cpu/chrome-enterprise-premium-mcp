@@ -84,8 +84,7 @@ This is a PREREQUISITE tool. Many other tools will fail if necessary APIs are di
             const errorMessage = error.message || ''
             const status = error.status || error.code || error.response?.status
             const mentionsServiceManagement =
-              errorMessage.includes('Service Management API') ||
-              new RegExp(`\\b${SERVICE_NAMES.SERVICE_MANAGEMENT}\\b`).test(errorMessage)
+              errorMessage.includes('Service Management API') || errorMessage.includes(SERVICE_NAMES.SERVICE_MANAGEMENT)
 
             if (mentionsServiceManagement || status === 403) {
               const consoleLink = `https://console.cloud.google.com/apis/library/${SERVICE_NAMES.SERVICE_MANAGEMENT}?project=${projectId}`
