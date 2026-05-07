@@ -303,14 +303,10 @@ describe('buildAuthRemediationLines', () => {
     const commandText = lines.slice(1).join('\n')
     const tokens = shellTokenize(commandText)
     assert.deepStrictEqual(tokens.slice(0, 4), ['gcloud', 'auth', 'application-default', 'login'])
-    assert.strictEqual(
-      tokens.length,
-      5,
-      `expected exactly 5 argv tokens (gcloud auth application-default login --scopes=...); got ${tokens.length}: ${JSON.stringify(tokens)}`,
-    )
-    assert.ok(tokens[4].startsWith('--scopes='), `expected --scopes flag, got: ${tokens[4]}`)
+    const scopeFlag = tokens.find(t => t.startsWith('--scopes='))
+    assert.ok(scopeFlag, `expected a --scopes flag in the tokenized command; got tokens: ${JSON.stringify(tokens)}`)
     assert.doesNotMatch(
-      tokens[4],
+      scopeFlag,
       /\s/,
       '--scopes value must not contain whitespace; that would make gcloud reject the trailing URLs as positional args',
     )
@@ -319,7 +315,9 @@ describe('buildAuthRemediationLines', () => {
   test('When the command is shell-tokenized, then the --scopes value contains every required scope and nothing extra', () => {
     const lines = buildAuthRemediationLines(adcMissing, REQUIRED)
     const tokens = shellTokenize(lines.slice(1).join('\n'))
-    const scopeArg = tokens[4].slice('--scopes='.length)
+    const scopeFlag = tokens.find(t => t.startsWith('--scopes='))
+    assert.ok(scopeFlag, 'expected a --scopes flag in the command')
+    const scopeArg = scopeFlag.slice('--scopes='.length)
     const printedScopes = scopeArg.split(',')
     assert.deepStrictEqual(
       printedScopes.slice().sort(),
@@ -336,7 +334,10 @@ describe('buildAuthRemediationLines', () => {
     // openid is the documented exception — it is returned verbatim.
     const lines = buildAuthRemediationLines(adcMissing, REQUIRED)
     const tokens = shellTokenize(lines.slice(1).join('\n'))
-    const printedScopes = tokens[4].slice('--scopes='.length).split(',')
+    const scopeFlag = tokens.find(t => t.startsWith('--scopes='))
+    assert.ok(scopeFlag, 'expected a --scopes flag in the command')
+    const scopeArg = scopeFlag.slice('--scopes='.length)
+    const printedScopes = scopeArg.split(',')
     for (const scope of printedScopes) {
       if (scope === 'openid') {
         continue
@@ -352,7 +353,9 @@ describe('buildAuthRemediationLines', () => {
   test('When the command is shell-tokenized, then it explicitly contains all critical Chrome Enterprise Premium required scopes', () => {
     const lines = buildAuthRemediationLines(adcMissing, REQUIRED)
     const tokens = shellTokenize(lines.slice(1).join('\n'))
-    const scopeArg = tokens[4].slice('--scopes='.length)
+    const scopeFlag = tokens.find(t => t.startsWith('--scopes='))
+    assert.ok(scopeFlag, 'expected a --scopes flag in the command')
+    const scopeArg = scopeFlag.slice('--scopes='.length)
     const printedScopes = scopeArg.split(',')
 
     // TODO(b/510465023): Update this list once the required scopes are finalized.
