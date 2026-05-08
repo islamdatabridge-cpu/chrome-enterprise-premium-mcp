@@ -27,18 +27,15 @@ Both must pass for an eval to pass.
 test/evals/
   run.js              CLI entry point
   global.yaml         Global forbidden patterns + default judge rubric
+  TEMPLATE.eval.js    Starter template for new cases
   lib/
-    loader.js          Parses eval .md files into structured objects
+    loader.js          Loads .eval.js cases (and remaining legacy .md cases)
     assertions.js      Deterministic checks (forbidden/required patterns, tool validation)
     judge.js           Gemini-as-judge for semantic evaluation
     agent.js           Lightweight Gemini function-calling agent loop
     reporter.js        Console + JSON output
   cases/
-    knowledge/         Factual Q&A evals (search_content tool)
-    inspection/        "Check my deployment" evals (read-only tool calls)
-    troubleshooting/   Diagnostic evals (multi-tool investigation)
-    mutation/          Create/delete resource evals (write tool calls)
-    discovery/         "List my resources" evals
+    <category>/        One .eval.js file per case; category is the directory name
 ```
 
 The agent loop in `agent.js` loads the server's system prompt from
@@ -48,60 +45,30 @@ response.
 
 ## Eval file format
 
-Each eval is a Markdown file with YAML frontmatter. Example:
+Each eval case is a JavaScript file at `cases/<category>/<id>.eval.js` that default-exports a single object. The full spec — every field, validation rules, and patterns for sharing rubrics across cases — is in [`docs/evals/format.md`](../../docs/evals/format.md). A copyable starter is at [`TEMPLATE.eval.js`](./TEMPLATE.eval.js).
 
-```markdown
----
-id: m01
-category: mutation
-tags: [dlp, create]
-expected_tools: [list_org_units, create_chrome_dlp_rule]
-forbidden_patterns:
-  - "re:policies/\\w+"
-  - "re:fakeOUId\\d+"
-required_patterns:
-  - warn
----
+Example:
 
-## Prompt
-
-Create a DLP rule that warns users when they try to upload files containing
-credit card numbers. Apply it to the root organizational unit.
-
-## Golden Response
-
-Agent should identify the root OU, then create a DLP rule with warn action for
-file upload trigger with a content condition for credit card patterns. Should
-confirm the rule was created successfully. Confirmation must not expose internal
-system identifiers like policy resource names or CEL syntax.
-
-## Judge Instructions
-
-Verify the agent actually created the rule (tool was called), not just described
-how to create one. The response must confirm the action was taken and describe
-what was configured in user-friendly terms.
+```js
+export default {
+  id: 'm01',
+  priority: 'P1',
+  tags: ['dlp', 'create'],
+  scenario: 'healthy',
+  expectedTools: ['list_org_units', 'create_chrome_dlp_rule'],
+  forbiddenPatterns: ['re:policies/\\w+', 're:fakeOUId\\d+'],
+  requiredPatterns: ['warn'],
+  prompt: `Create a DLP rule that warns users when they try to upload files
+containing credit card numbers. Apply it to the root organizational unit.`,
+  goldenResponse: `Agent should identify the root OU, then create a DLP rule
+with warn action for file upload trigger with a content condition for credit
+card patterns. Should confirm the rule was created successfully.`,
+  judgeInstructions: `Verify the agent actually created the rule (tool was
+called), not just described how to create one.`,
+}
 ```
 
-### Frontmatter fields
-
-| Field                | Type     | Description                                                                                                          |
-| -------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
-| `id`                 | string   | Unique identifier (e.g., `k01`, `m01`, `t03`)                                                                        |
-| `category`           | string   | One of: `knowledge`, `inspection`, `troubleshooting`, `mutation`, `discovery`, `connectors`                          |
-| `priority`           | string   | Classification: `P0` (launch blocking - must work), `P1` (agent must not get egregiously wrong), `P2` (nice to have) |
-| `tags`               | string[] | Freeform tags for filtering (e.g., `[dlp, create]`)                                                                  |
-| `expected_tools`     | string[] | Tools the agent should call. Validated deterministically.                                                            |
-| `forbidden_patterns` | string[] | Strings/regexes that must NOT appear in the response. Merged with global patterns.                                   |
-| `required_patterns`  | string[] | Strings/regexes that MUST appear in the response.                                                                    |
-
-### Markdown sections
-
-- **`## Prompt`** -- The user message sent to the agent. This is the input.
-- **`## Golden Response`** -- What a correct response looks like. The LLM judge
-  compares the agent's output against this. Not a word-for-word template -- the
-  judge evaluates semantic equivalence.
-- **`## Judge Instructions`** (optional) -- Per-eval rubric overrides. If
-  absent, the default rubric from `global.yaml` is used.
+The category is the parent directory name; there is no `category` field on the case object.
 
 ## Grading: two layers
 
@@ -312,28 +279,19 @@ response text, and timing. CI systems can parse this for reporting.
 
 ## Writing new evals
 
-1. Create a `.md` file in the appropriate `cases/<category>/` directory.
-2. Use the naming convention `<id>-<short-slug>.md` (e.g.,
-   `m04-delete-url-detector.md`).
-3. Fill in the frontmatter: `id`, `category`, `tags`, `expected_tools`.
-4. Add `forbidden_patterns` if the eval touches resources with internal IDs.
-5. Add `required_patterns` only for canonical strings (proper nouns, numbers).
-6. Write `## Prompt` -- what the user asks.
-7. Write `## Golden Response` -- what a correct answer covers.
-8. Optionally write `## Judge Instructions` if the default rubric needs
-   overriding.
+1. Copy `test/evals/TEMPLATE.eval.js` to `cases/<category>/<id>.eval.js`. The category is the parent directory name.
+2. Set `id` to a value that's unique across the suite. Both short codes (`m04`) and descriptive snake_case (`list_dlp_rules__no_rules`) are accepted; match whichever a sibling case in the same directory uses.
+3. Set `prompt` (or `promptName`) and `goldenResponse`. Add `expectedTools`, `scenario`, `tags`, and `judgeInstructions` as needed.
+4. For mutation cases, add `'re:policies/\\w+'` to `forbiddenPatterns` to catch resource ID leaks.
+5. Run `npm run eval -- --id <your-id>` to verify the case loads, scenario applies, and the judge passes.
+
+See [`docs/evals/format.md`](../../docs/evals/format.md) for the full field reference.
 
 ### Tips
 
-- Golden responses don't need to be word-for-word templates. Describe the key
-  facts and behaviors the response should exhibit. The judge evaluates semantic
-  equivalence, not exact match.
-- For mutation evals, always add `"re:policies/\\w+"` to forbidden patterns to
-  catch resource ID leaks.
-- The `expected_tools` check is strict: every listed tool must be called. Don't
-  list tools that the agent _might_ call -- list tools it _should_ call.
-- If the eval tests a tool that modifies state, the fake server resets between
-  evals so ordering doesn't matter.
+- Golden responses don't need to be word-for-word templates. Describe the key facts and behaviors the response should exhibit. The judge evaluates semantic equivalence, not exact match.
+- The `expectedTools` check is strict: every listed tool must be called. Don't list tools that the agent _might_ call — list tools it _should_ call.
+- If the eval tests a tool that modifies state, the fake server resets between evals so ordering doesn't matter.
 
 ## Server integration
 
