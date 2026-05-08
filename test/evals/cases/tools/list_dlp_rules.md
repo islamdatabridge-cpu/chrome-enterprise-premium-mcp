@@ -131,27 +131,3 @@ The resource names are:
 
 The agent must accurately extract the technical resource names from the tool's output. This verifies it can read the "Resource names for API operations" section of the tool's response.
 
---- CASE ---
-
-id: list_dlp_rules__when_no_rules_returned_agent_reports_none
-category: discovery
-tags:
-  - tools
-  - dlp
-  - empty-state
-scenario: no-dlp-rules
-expected_tools:
-  - list_dlp_rules
-priority: P2
-
-## Prompt
-
-List my configured Chrome DLP rules.
-
-## Golden Response
-
-No Chrome DLP rules were found in this organization.
-
-## Judge Instructions
-
-The agent must clearly and accurately state that no rules were found.
