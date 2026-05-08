@@ -45,36 +45,83 @@ describe('Eval Loader', () => {
   })
 
   describe('loadEvalsFromFile', () => {
+    function writeTmpMarkdown(content) {
+      const file = path.join(os.tmpdir(), `eval-md-${Date.now()}-${Math.random()}.md`)
+      fs.writeFileSync(file, content, 'utf8')
+      return file
+    }
+
     test('When a markdown eval file with multiple cases is parsed, then it returns all cases', () => {
       const config = loadGlobalConfig(evalsDir)
-      const evalFile = path.join(evalsDir, 'cases', 'system', 'experiments.md')
-      const evals = loadEvalsFromFile(evalFile, config)
-
-      assert.ok(evals.length >= 2, 'should find multiple eval cases in consolidated file')
-      const sys01 = evals.find(e => e.id === 'sys-01')
-      assert.ok(sys01)
-      assert.strictEqual(sys01.id, 'sys-01')
-      assert.strictEqual(sys01.category, 'system')
-      assert.ok(sys01.prompt.includes("'delete_agent_dlp_rule'"))
-      assert.ok(sys01.goldenResponse.toLowerCase().includes('no'))
+      const file = writeTmpMarkdown(
+        [
+          '--- CASE ---',
+          'id: tmp_a',
+          'category: system',
+          'tags: [smoke]',
+          '## Prompt',
+          'first prompt',
+          '## Golden Response',
+          'first response',
+          '--- CASE ---',
+          'id: tmp_b',
+          'category: system',
+          '## Prompt',
+          'second prompt',
+          '## Golden Response',
+          'second response',
+        ].join('\n'),
+      )
+      try {
+        const evals = loadEvalsFromFile(file, config)
+        assert.strictEqual(evals.length, 2)
+        const a = evals.find(e => e.id === 'tmp_a')
+        assert.ok(a)
+        assert.strictEqual(a.category, 'system')
+        assert.deepStrictEqual(a.tags, ['smoke'])
+        assert.strictEqual(a.prompt, 'first prompt')
+        assert.strictEqual(a.goldenResponse, 'first response')
+      } finally {
+        fs.unlinkSync(file)
+      }
     })
 
     test('When evals are loaded from file, then they inherit global forbidden patterns', () => {
       const config = loadGlobalConfig(evalsDir)
-      const evalFile = path.join(evalsDir, 'cases', 'system', 'experiments.md')
-      const evals = loadEvalsFromFile(evalFile, config)
-      const sys01 = evals.find(e => e.id === 'sys-01')
-
-      assert.ok(sys01.forbiddenPatterns.includes('google.workspace.chrome.file.v1.upload'))
+      const file = writeTmpMarkdown(
+        ['--- CASE ---', 'id: inherit_globals', 'category: system', '## Prompt', 'p', '## Golden Response', 'g'].join(
+          '\n',
+        ),
+      )
+      try {
+        const [c] = loadEvalsFromFile(file, config)
+        assert.ok(c.forbiddenPatterns.includes('google.workspace.chrome.file.v1.upload'))
+      } finally {
+        fs.unlinkSync(file)
+      }
     })
 
     test('When evals are loaded from file, then it extracts required_patterns from frontmatter', () => {
       const config = loadGlobalConfig(evalsDir)
-      const evalFile = path.join(evalsDir, 'cases', 'system', 'auth-remediation.md')
-      const evals = loadEvalsFromFile(evalFile, config)
-      const s03 = evals.find(e => e.id === 's03')
-
-      assert.ok(s03.requiredPatterns.includes('gcloud auth application-default login'))
+      const file = writeTmpMarkdown(
+        [
+          '--- CASE ---',
+          'id: req_patterns',
+          'category: system',
+          'required_patterns:',
+          '  - gcloud auth application-default login',
+          '## Prompt',
+          'p',
+          '## Golden Response',
+          'g',
+        ].join('\n'),
+      )
+      try {
+        const [c] = loadEvalsFromFile(file, config)
+        assert.ok(c.requiredPatterns.includes('gcloud auth application-default login'))
+      } finally {
+        fs.unlinkSync(file)
+      }
     })
   })
 

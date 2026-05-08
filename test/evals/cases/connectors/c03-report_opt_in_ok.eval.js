@@ -15,14 +15,14 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_paste_3p__then_warn_bypass',
+  id: 'c03',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'paste-connector-3p-trellix',
+  scenario: 'reporting-connector-default-opt-in',
   expectedTools: ['get_connector_policy'],
-  prompt: 'Audit my paste (bulk text entry) connector for the Root OU.',
+  requiredPatterns: ['Login'],
+  prompt: 'How is my event reporting connector configured for the Root OU? Are Login events enabled?',
   goldenResponse:
-    'Your bulk text entry (paste) analysis is currently managed by a 3rd party provider (Trellix). Integrated Chrome Enterprise Premium protections might be bypassed in this configuration.',
-  judgeInstructions:
-    'Pass if the agent identifies the 3rd party provider and issues a warning about potential feature bypass.',
+    'Your Event Reporting connector is active and configured. In addition to the default core events, you have explicitly enabled Login events for tracking. Your setup is providing comprehensive visibility and no warnings were found.',
+  judgeInstructions: 'Pass if the agent identifies that both core events and Login events are enabled.',
 }

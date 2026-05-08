@@ -15,17 +15,13 @@ limitations under the License.
 */
 
 export default {
-  id: 'list_dlp_rules__when_configured_rules_requested_agent_identifies_all',
-  priority: 'P0',
+  id: 'i10',
+  priority: 'P2',
   tags: ['tools', 'dlp'],
   scenario: 'healthy',
   expectedTools: ['list_dlp_rules'],
-  prompt: 'Which Chrome DLP rules are currently configured in my organization?',
-  goldenResponse: `Your organization has 4 Chrome DLP rules currently configured:
-- **Block sensitive file uploads**
-- **Watermark confidential documents**
-- **Audit pastes to generative AI sites**
-- **Warn before uploading PII**`,
+  prompt: 'Are there any rules configured to monitor browser printing?',
+  goldenResponse: 'Yes, the **Watermark confidential documents** rule is configured to monitor the **PRINT** action.',
   judgeInstructions:
-    'Verify that the agent correctly decides to use `list_dlp_rules` based on the user\'s request for "configured rules". The agent should accurately list all 4 rules from the environment.',
+    'The agent should identify the rule that monitors "printing" by checking the `triggers` field in the tool output, corresponding to the "printing" capability in the tool description.',
 }

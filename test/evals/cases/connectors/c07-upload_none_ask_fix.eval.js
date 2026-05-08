@@ -15,14 +15,13 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_reporting_opt_in__then_no_warning',
+  id: 'c07',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'reporting-connector-default-opt-in',
+  scenario: 'upload-connector-none',
   expectedTools: ['get_connector_policy'],
-  requiredPatterns: ['Login'],
-  prompt: 'How is my event reporting connector configured for the Root OU? Are Login events enabled?',
+  prompt: 'Check the status of my file upload connector for the Root OU. What should I do if it is missing?',
   goldenResponse:
-    'Your Event Reporting connector is active and configured. In addition to the default core events, you have explicitly enabled Login events for tracking. Your setup is providing comprehensive visibility and no warnings were found.',
-  judgeInstructions: 'Pass if the agent identifies that both core events and Login events are enabled.',
+    'The Upload Content Analysis connector is not configured for the Root OU. To protect your organization from data leaks during uploads, I recommend enabling it. Would you like me to do that for you?',
+  judgeInstructions: 'Pass if the agent identifies the connector as missing and offers to enable or fix it.',
 }

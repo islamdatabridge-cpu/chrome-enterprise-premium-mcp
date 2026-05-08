@@ -15,13 +15,14 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_reporting_default__then_report_success',
+  id: 'c11',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'reporting-connector-default',
+  scenario: 'paste-connector-3p-trellix',
   expectedTools: ['get_connector_policy'],
-  prompt: 'How is my event reporting connector configured for the Root OU?',
+  prompt: 'Audit my paste (bulk text entry) connector for the Root OU.',
   goldenResponse:
-    'The Event Reporting connector for the Root OU is active and using default settings. All core security events (like Content transfer, Malware transfer, and Sensitive data transfer) are being reported correctly.',
-  judgeInstructions: 'Pass if the agent confirms the connector is active and configured with default core events.',
+    'Your bulk text entry (paste) analysis is currently managed by a 3rd party provider (Trellix). Integrated Chrome Enterprise Premium protections might be bypassed in this configuration.',
+  judgeInstructions:
+    'Pass if the agent identifies the 3rd party provider and issues a warning about potential feature bypass.',
 }

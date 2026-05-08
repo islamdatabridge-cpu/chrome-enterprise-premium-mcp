@@ -15,14 +15,13 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_reporting_none__then_ask_to_fix',
+  id: 'c04',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'reporting-connector-none',
+  scenario: 'reporting-connector-customized-full',
   expectedTools: ['get_connector_policy'],
-  prompt: 'How is my event reporting connector configured for the Root OU? What should I do if it is not set up?',
+  prompt: 'How is my event reporting connector configured for the Root OU?',
   goldenResponse:
-    'The Event Reporting connector is not currently configured for the Root Organizational Unit. This means security events are not being reported to the Admin Console. I recommend enabling this connector so you can receive security telemetry. Would you like me to fix this for you?',
-  judgeInstructions:
-    'Pass if the agent identifies the connector as not configured and offers to fix or enable it for the user.',
+    'The Event Reporting connector is configured to report all 7 core security events. Your configuration is correct and provides complete coverage for security monitoring with no warnings issued.',
+  judgeInstructions: 'Pass if the agent confirms that all core events are being reported and issues no warnings.',
 }

@@ -15,15 +15,13 @@ limitations under the License.
 */
 
 export default {
-  id: 'list_dlp_rules__when_upload_monitoring_queried_agent_finds_rule',
+  id: 'c09',
   priority: 'P1',
-  tags: ['tools', 'dlp'],
-  scenario: 'healthy',
-  expectedTools: ['list_dlp_rules'],
-  prompt: 'Show me the rules that monitor data during browser uploads.',
-  goldenResponse: `You have two rules monitoring data during uploads:
-1. **Block sensitive file uploads**
-2. **Warn before uploading PII**`,
-  judgeInstructions:
-    'The agent must identify the rules that specifically target "uploads" (FILE_UPLOAD trigger) as mentioned in the tool\'s description.',
+  tags: ['connectors'],
+  scenario: 'upload-connector-cep-restricted',
+  expectedTools: ['get_connector_policy'],
+  prompt: 'Check the status of my file upload connector for the Root OU.',
+  goldenResponse:
+    'The Upload Content Analysis connector is active, but scanning is restricted for certain URL patterns in your Malware and Sensitive data settings. This creates potential blind spots. I recommend reviewing these allowlists in the Admin Console.',
+  judgeInstructions: 'Pass if the agent identifies and warns about restricted scanning or URL allowlists.',
 }

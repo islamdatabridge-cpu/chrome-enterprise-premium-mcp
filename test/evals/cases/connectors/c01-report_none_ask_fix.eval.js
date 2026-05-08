@@ -15,13 +15,14 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_upload_none__then_ask_to_fix',
+  id: 'c01',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'upload-connector-none',
+  scenario: 'reporting-connector-none',
   expectedTools: ['get_connector_policy'],
-  prompt: 'Check the status of my file upload connector for the Root OU. What should I do if it is missing?',
+  prompt: 'How is my event reporting connector configured for the Root OU? What should I do if it is not set up?',
   goldenResponse:
-    'The Upload Content Analysis connector is not configured for the Root OU. To protect your organization from data leaks during uploads, I recommend enabling it. Would you like me to do that for you?',
-  judgeInstructions: 'Pass if the agent identifies the connector as missing and offers to enable or fix it.',
+    'The Event Reporting connector is not currently configured for the Root Organizational Unit. This means security events are not being reported to the Admin Console. I recommend enabling this connector so you can receive security telemetry. Would you like me to fix this for you?',
+  judgeInstructions:
+    'Pass if the agent identifies the connector as not configured and offers to fix or enable it for the user.',
 }

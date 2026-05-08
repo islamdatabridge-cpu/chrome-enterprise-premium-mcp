@@ -15,17 +15,17 @@ limitations under the License.
 */
 
 export default {
-  id: 'list_dlp_rules__when_resource_names_requested_agent_extracts_values',
-  priority: 'P2',
+  id: 'd04',
+  priority: 'P0',
   tags: ['tools', 'dlp'],
   scenario: 'healthy',
   expectedTools: ['list_dlp_rules'],
-  prompt: 'What are the API resource names for my configured rules?',
-  goldenResponse: `The resource names are:
-- **Block sensitive file uploads**: \`policies/dlpBlock1\`
-- **Watermark confidential documents**: \`policies/dlpWatermark1\`
-- **Audit pastes to generative AI sites**: \`policies/dlpAuditGenAI\`
-- **Warn before uploading PII**: \`policies/dlpWarnPII\``,
+  prompt: 'Which Chrome DLP rules are currently configured in my organization?',
+  goldenResponse: `Your organization has 4 Chrome DLP rules currently configured:
+- **Block sensitive file uploads**
+- **Watermark confidential documents**
+- **Audit pastes to generative AI sites**
+- **Warn before uploading PII**`,
   judgeInstructions:
-    'The agent must accurately extract the technical resource names from the tool\'s output. This verifies it can read the "Resource names for API operations" section of the tool\'s response.',
+    'Verify that the agent correctly decides to use `list_dlp_rules` based on the user\'s request for "configured rules". The agent should accurately list all 4 rules from the environment.',
 }

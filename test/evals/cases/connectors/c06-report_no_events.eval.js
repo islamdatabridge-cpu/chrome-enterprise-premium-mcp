@@ -15,14 +15,14 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_reporting_missing_events__then_warn',
+  id: 'c06',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'reporting-connector-customized-partial',
+  scenario: 'reporting-connector-customized-none',
   expectedTools: ['get_connector_policy'],
   prompt: 'How is my event reporting connector configured for the Root OU?',
   goldenResponse:
-    'The Event Reporting connector is configured but is missing several core security events. Specifically, it is not reporting: Content unscanned, Malware transfer, Sensitive data transfer, Unsafe site visit, URL filtering interstitial, and Suspicious URL. I recommend updating these settings in the Admin Console to ensure full visibility.',
+    'The Event Reporting connector is active but has no security events selected for reporting. This means your organization is not receiving any security telemetry. Specifically, all core events (Content transfer, Malware transfer, etc.) are missing. I strongly recommend enabling these events in the Admin Console.',
   judgeInstructions:
-    'Pass if the agent provides a warning listing the specific core events that are missing from the configuration.',
+    'Pass if the agent issues a critical warning indicating that no events are being reported and mentions the missing core telemetry.',
 }

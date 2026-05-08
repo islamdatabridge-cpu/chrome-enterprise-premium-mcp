@@ -15,13 +15,13 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_upload_restricted__then_warn_allowlist',
+  id: 'c08',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'upload-connector-cep-restricted',
+  scenario: 'upload-connector-cep-no-delay',
   expectedTools: ['get_connector_policy'],
   prompt: 'Check the status of my file upload connector for the Root OU.',
   goldenResponse:
-    'The Upload Content Analysis connector is active, but scanning is restricted for certain URL patterns in your Malware and Sensitive data settings. This creates potential blind spots. I recommend reviewing these allowlists in the Admin Console.',
-  judgeInstructions: 'Pass if the agent identifies and warns about restricted scanning or URL allowlists.',
+    'The Upload Content Analysis connector is active, but "Delay Delivery Until Verdict" is disabled. This means users might complete uploads before the security scan finishes. I recommend enabling delay enforcement for better protection.',
+  judgeInstructions: 'Pass if the agent issues a warning about disabled delay enforcement and recommends enabling it.',
 }

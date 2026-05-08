@@ -15,13 +15,13 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_upload_no_delay__then_warn',
+  id: 'c02',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'upload-connector-cep-no-delay',
+  scenario: 'reporting-connector-default',
   expectedTools: ['get_connector_policy'],
-  prompt: 'Check the status of my file upload connector for the Root OU.',
+  prompt: 'How is my event reporting connector configured for the Root OU?',
   goldenResponse:
-    'The Upload Content Analysis connector is active, but "Delay Delivery Until Verdict" is disabled. This means users might complete uploads before the security scan finishes. I recommend enabling delay enforcement for better protection.',
-  judgeInstructions: 'Pass if the agent issues a warning about disabled delay enforcement and recommends enabling it.',
+    'The Event Reporting connector for the Root OU is active and using default settings. All core security events (like Content transfer, Malware transfer, and Sensitive data transfer) are being reported correctly.',
+  judgeInstructions: 'Pass if the agent confirms the connector is active and configured with default core events.',
 }

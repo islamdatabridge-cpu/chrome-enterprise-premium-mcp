@@ -15,13 +15,14 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_upload_3p__then_warn_bypass',
+  id: 'c12',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'upload-connector-3p-trellix',
+  scenario: 'print-connector-cep-no-delay',
   expectedTools: ['get_connector_policy'],
-  prompt: 'Check the status of my file upload connector for the Root OU.',
+  prompt: 'Check the configuration of my print connector for the Root OU.',
   goldenResponse:
-    'Your file upload analysis is currently being handled by a 3rd party provider (Trellix). While active, please note that some integrated Chrome Enterprise Premium features may be bypassed.',
-  judgeInstructions: 'Pass if the agent identifies the 3rd party provider and warns about potential feature bypass.',
+    'The Print Analysis connector is active, but "Delay Delivery Until Verdict" is disabled. I recommend enabling delay enforcement to ensure that sensitive data is scanned before printing is permitted.',
+  judgeInstructions:
+    'Pass if the agent identifies the disabled delay enforcement for the print connector and recommends enabling it.',
 }

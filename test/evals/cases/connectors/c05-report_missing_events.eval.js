@@ -15,14 +15,14 @@ limitations under the License.
 */
 
 export default {
-  id: 'get_connector_policy__when_print_no_delay__then_warn',
+  id: 'c05',
   priority: 'P1',
   tags: ['connectors'],
-  scenario: 'print-connector-cep-no-delay',
+  scenario: 'reporting-connector-customized-partial',
   expectedTools: ['get_connector_policy'],
-  prompt: 'Check the configuration of my print connector for the Root OU.',
+  prompt: 'How is my event reporting connector configured for the Root OU?',
   goldenResponse:
-    'The Print Analysis connector is active, but "Delay Delivery Until Verdict" is disabled. I recommend enabling delay enforcement to ensure that sensitive data is scanned before printing is permitted.',
+    'The Event Reporting connector is configured but is missing several core security events. Specifically, it is not reporting: Content unscanned, Malware transfer, Sensitive data transfer, Unsafe site visit, URL filtering interstitial, and Suspicious URL. I recommend updating these settings in the Admin Console to ensure full visibility.',
   judgeInstructions:
-    'Pass if the agent identifies the disabled delay enforcement for the print connector and recommends enabling it.',
+    'Pass if the agent provides a warning listing the specific core events that are missing from the configuration.',
 }

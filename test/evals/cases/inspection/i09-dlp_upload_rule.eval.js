@@ -15,16 +15,15 @@ limitations under the License.
 */
 
 export default {
-  id: 'list_dlp_rules__when_monitoring_actions_queried_agent_discovers_triggers',
+  id: 'i09',
   priority: 'P1',
   tags: ['tools', 'dlp'],
   scenario: 'healthy',
   expectedTools: ['list_dlp_rules'],
-  prompt: 'Which browser actions are we currently monitoring for data protection?',
-  goldenResponse: `We are currently monitoring the following browser actions using Chrome DLP rules:
-- **FILE_UPLOAD** (Block sensitive file uploads, Warn before uploading PII)
-- **PRINT** (Watermark confidential documents)
-- **WEB_CONTENT_UPLOAD** (Audit pastes to generative AI sites)`,
+  prompt: 'Show me the rules that monitor data during browser uploads.',
+  goldenResponse: `You have two rules monitoring data during uploads:
+1. **Block sensitive file uploads**
+2. **Warn before uploading PII**`,
   judgeInstructions:
-    'The agent must identify the specific browser actions (triggers) being monitored by examining the current DLP rules. It should correctly associate the rules with their respective actions (uploads, printing, pastes).',
+    'The agent must identify the rules that specifically target "uploads" (FILE_UPLOAD trigger) as mentioned in the tool\'s description.',
 }

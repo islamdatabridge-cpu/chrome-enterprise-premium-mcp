@@ -15,13 +15,16 @@ limitations under the License.
 */
 
 export default {
-  id: 'list_dlp_rules__when_print_monitoring_queried_agent_finds_rule',
-  priority: 'P2',
+  id: 'd05',
+  priority: 'P1',
   tags: ['tools', 'dlp'],
   scenario: 'healthy',
   expectedTools: ['list_dlp_rules'],
-  prompt: 'Are there any rules configured to monitor browser printing?',
-  goldenResponse: 'Yes, the **Watermark confidential documents** rule is configured to monitor the **PRINT** action.',
+  prompt: 'Which browser actions are we currently monitoring for data protection?',
+  goldenResponse: `We are currently monitoring the following browser actions using Chrome DLP rules:
+- **FILE_UPLOAD** (Block sensitive file uploads, Warn before uploading PII)
+- **PRINT** (Watermark confidential documents)
+- **WEB_CONTENT_UPLOAD** (Audit pastes to generative AI sites)`,
   judgeInstructions:
-    'The agent should identify the rule that monitors "printing" by checking the `triggers` field in the tool output, corresponding to the "printing" capability in the tool description.',
+    'The agent must identify the specific browser actions (triggers) being monitored by examining the current DLP rules. It should correctly associate the rules with their respective actions (uploads, printing, pastes).',
 }

@@ -15,12 +15,13 @@ limitations under the License.
 */
 
 export default {
-  id: 'list_dlp_rules__when_no_rules_returned_agent_reports_none',
-  priority: 'P2',
-  tags: ['tools', 'dlp', 'empty-state'],
-  scenario: 'no-dlp-rules',
-  expectedTools: ['list_dlp_rules'],
-  prompt: 'List my configured Chrome DLP rules.',
-  goldenResponse: 'No Chrome DLP rules were found in this organization.',
-  judgeInstructions: 'The agent must clearly and accurately state that no rules were found.',
+  id: 'c10',
+  priority: 'P1',
+  tags: ['connectors'],
+  scenario: 'upload-connector-3p-trellix',
+  expectedTools: ['get_connector_policy'],
+  prompt: 'Check the status of my file upload connector for the Root OU.',
+  goldenResponse:
+    'Your file upload analysis is currently being handled by a 3rd party provider (Trellix). While active, please note that some integrated Chrome Enterprise Premium features may be bypassed.',
+  judgeInstructions: 'Pass if the agent identifies the 3rd party provider and warns about potential feature bypass.',
 }
