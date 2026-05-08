@@ -277,6 +277,49 @@ response text, and timing. CI systems can parse this for reporting.
 
 **Exit code**: 0 if all evals pass, 1 if any fail.
 
+## Drift detection
+
+The GitHub Actions workflow defined in `.github/workflows/agent-evals.yml`
+runs the eval suite on a daily schedule (11:00 UTC) and on manual dispatch.
+After each run completes, the full set of results is written to
+`results/eval-latest.json` and uploaded as a workflow artifact.
+
+Regressions are detected by `test/evals/diff.js`, which compares the latest
+results against the checked-in baseline at `test/evals/baseline.json`. The
+script exits with status code 1 when the overall pass rate has fallen by
+more than 5%; the threshold is configurable through the `--threshold` flag.
+
+When a regression is reported, an issue titled `Eval drift detected` is
+opened under the `auto:evals` label. If such an issue is already open, a new
+comment is appended to it instead. The workflow run itself is then marked as
+failed.
+
+When transient errors account for more than 20% of cases, the run is
+classified as INCONCLUSIVE and the diff step is skipped. This prevents a
+flaky upstream API from being mistaken for a real regression.
+
+You can run the same diff locally:
+
+```bash
+node test/evals/diff.js test/evals/baseline.json results/eval-latest.json
+```
+
+### Updating the baseline
+
+Refresh the baseline whenever the pass rate on `main` has been deliberately
+improved — for example, after a system-prompt change or after new evals have
+been added to the suite. The procedure is to download the artifact from a
+green workflow run on `main`, copy `eval-latest.json` over the existing
+baseline file, and commit the result:
+
+```bash
+gh run download <RUN_ID> --repo google/chrome-enterprise-premium-mcp --dir /tmp/eval-artifact
+cp /tmp/eval-artifact/eval-results/eval-latest.json test/evals/baseline.json
+```
+
+Once the updated baseline is on `main`, subsequent scheduled and manually
+dispatched runs are compared against it.
+
 ## Writing new evals
 
 1. Copy `test/evals/TEMPLATE.eval.js` to `cases/<category>/<id>.eval.js`. The category is the parent directory name.

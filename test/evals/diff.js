@@ -19,7 +19,7 @@ limitations under the License.
  * @file Compares two eval JSON outputs (baseline vs. current) and exits
  * non-zero when the pass rate has regressed beyond the threshold.
  *
- * Usage: node scripts/eval-diff.js <baseline.json> <current.json> [--threshold <pct>]
+ * Usage: node test/evals/diff.js <baseline.json> <current.json> [--threshold <pct>]
  *
  * Exit codes: 0 = within threshold or no baseline; 1 = regression; 2 = bad input.
  */
@@ -29,7 +29,7 @@ import fs from 'node:fs'
 const DEFAULT_THRESHOLD_PCT = 5
 
 const USAGE =
-  'Usage: node scripts/eval-diff.js <baseline.json> <current.json> [--threshold <pct>]\n' +
+  'Usage: node test/evals/diff.js <baseline.json> <current.json> [--threshold <pct>]\n' +
   `Default threshold: ${DEFAULT_THRESHOLD_PCT}%`
 
 /**
