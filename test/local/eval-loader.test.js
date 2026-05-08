@@ -70,11 +70,11 @@ describe('Eval Loader', () => {
 
     test('When evals are loaded from file, then it extracts required_patterns from frontmatter', () => {
       const config = loadGlobalConfig(evalsDir)
-      const evalFile = path.join(evalsDir, 'cases', 'tools', 'get_customer_id.md')
+      const evalFile = path.join(evalsDir, 'cases', 'system', 'auth-remediation.md')
       const evals = loadEvalsFromFile(evalFile, config)
-      const d01 = evals.find(e => e.id === 'd01')
+      const s03 = evals.find(e => e.id === 's03')
 
-      assert.ok(d01.requiredPatterns.includes('C01b1e65b'))
+      assert.ok(s03.requiredPatterns.includes('gcloud auth application-default login'))
     })
   })
 
