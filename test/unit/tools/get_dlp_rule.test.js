@@ -39,7 +39,7 @@ describe('get_dlp_rule tool handler', () => {
       setting: {
         value: {
           state: 'ACTIVE',
-          triggers: ['chrome.dlp.v1.FILE_UPLOAD'],
+          triggers: ['google.workspace.chrome.file.v1.upload'],
           action: {
             chromeAction: {
               blockContent: {},
@@ -64,7 +64,7 @@ describe('get_dlp_rule tool handler', () => {
     assert.match(text, /## DLP Rule: Block Secret Uploads/)
     assert.match(text, /\*\*Status\*\*: Active/)
     assert.match(text, /\*\*Action\*\*: Block/)
-    assert.match(text, /\*\*Triggers\*\*: FILE_UPLOAD/)
+    assert.match(text, /\*\*Triggers\*\*: file\.upload/)
     assert.match(text, /\[Manage in UI\]\(https:\/\/admin\.google\.com\/ac\/dp\/rules\/policies%2Frule123\)/)
 
     assert.strictEqual(

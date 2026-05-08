@@ -239,7 +239,7 @@ const CONNECTOR_CONFIGS = {
  * Registers the 'enable_chrome_enterprise_connectors' tool with the MCP server.
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server - The MCP server instance.
  * @param {object} options - Configuration options for the tool.
- * @param {import('../../lib/api/interfaces/chrome_policy_client.js').ChromePolicyClient} options.chromePolicyClient - The Chrome Policy client instance.
+ * @param {import('../../lib/api/chrome_policy_client.js').ChromePolicyClient} options.chromePolicyClient - The Chrome Policy client instance.
  * @param {object} sessionState - The session state object for caching.
  * @returns {void}
  */

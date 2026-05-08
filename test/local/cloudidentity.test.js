@@ -219,11 +219,11 @@ describe('Cloud Identity API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_cloud_identity_client.js': {
-            RealCloudIdentityClient: MockCloudIdentityClient,
+          '../../lib/api/cloud_identity_client.js': {
+            CloudIdentityClient: MockCloudIdentityClient,
           },
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -286,11 +286,11 @@ describe('Cloud Identity API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_cloud_identity_client.js': {
-            RealCloudIdentityClient: MockCloudIdentityClient,
+          '../../lib/api/cloud_identity_client.js': {
+            CloudIdentityClient: MockCloudIdentityClient,
           },
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -353,11 +353,11 @@ describe('Cloud Identity API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_cloud_identity_client.js': {
-            RealCloudIdentityClient: MockCloudIdentityClient,
+          '../../lib/api/cloud_identity_client.js': {
+            CloudIdentityClient: MockCloudIdentityClient,
           },
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -416,11 +416,11 @@ describe('Cloud Identity API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_cloud_identity_client.js': {
-            RealCloudIdentityClient: MockCloudIdentityClient,
+          '../../lib/api/cloud_identity_client.js': {
+            CloudIdentityClient: MockCloudIdentityClient,
           },
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -467,8 +467,8 @@ describe('Cloud Identity API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_cloud_identity_client.js': {
-            RealCloudIdentityClient: MockCloudIdentityClient,
+          '../../lib/api/cloud_identity_client.js': {
+            CloudIdentityClient: MockCloudIdentityClient,
           },
         },
       )
@@ -508,8 +508,8 @@ describe('Cloud Identity API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_cloud_identity_client.js': {
-            RealCloudIdentityClient: MockCloudIdentityClient,
+          '../../lib/api/cloud_identity_client.js': {
+            CloudIdentityClient: MockCloudIdentityClient,
           },
         },
       )

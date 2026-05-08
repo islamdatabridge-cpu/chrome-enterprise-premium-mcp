@@ -24,7 +24,7 @@ import { formatToolResponse } from './wrapper.js'
 /**
  * Helper to create a detector and format the response.
  * @param {object} apiClients - The API clients collection.
- * @param {import('../../lib/api/interfaces/cloud_identity_client.js').CloudIdentityClient} cloudIdentityClient - The Cloud Identity client instance.
+ * @param {import('../../lib/api/cloud_identity_client.js').CloudIdentityClient} cloudIdentityClient - The Cloud Identity client instance.
  * @param {string} customerId - The customer ID.
  * @param {string} authToken - The authentication token.
  * @param {object} sessionState - The session state object.

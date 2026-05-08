@@ -20,17 +20,16 @@ limitations under the License.
 
 import { z } from 'zod'
 import { guardedToolCall, formatToolResponse, safeFormatResponse } from '../utils/wrapper.js'
-import { formatStatus } from '../../lib/util/helpers.js'
+import { parseDlpRule } from '../../lib/util/helpers.js'
 import { commonOutputSchemas } from './shared.js'
 import { TAGS } from '../../lib/constants.js'
 import { logger } from '../../lib/util/logger.js'
-import { CHROME_ACTION_TYPES } from '../../lib/util/chrome_dlp_constants.js'
 
 /**
  * Registers the 'list_dlp_rules' tool with the MCP server.
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server - The MCP server instance.
  * @param {object} options - Configuration options for the tool.
- * @param {import('../../lib/api/interfaces/cloud_identity_client.js').CloudIdentityClient} options.cloudIdentityClient - The Cloud Identity client instance.
+ * @param {import('../../lib/api/cloud_identity_client.js').CloudIdentityClient} options.cloudIdentityClient - The Cloud Identity client instance.
  * @param {object} sessionState - The session state object for caching.
  * @returns {void}
  */
@@ -76,32 +75,7 @@ export function registerListDlpRulesTool(server, options, sessionState) {
                 })
               }
 
-              const ruleEntries = data.map(p => {
-                const setting = p.setting || {}
-                const value = setting.value || {}
-
-                const name = value.displayName || setting.displayName || p.displayName || 'Unnamed Rule'
-                const status = formatStatus(value.state || setting.state)
-
-                let action = 'Unknown'
-                const chromeAction = value.action?.chromeAction || {}
-                const foundAction = Object.values(CHROME_ACTION_TYPES).find(a => chromeAction[a.apiKey])
-                if (foundAction) {
-                  action = foundAction.value.charAt(0).toUpperCase() + foundAction.value.slice(1).toLowerCase()
-                }
-                const triggers = (value.triggers || [])
-                  .map(t =>
-                    t
-                      .replace(/^(?:google\.workspace\.)?chrome\./, '')
-                      .split('.')
-                      .filter(part => !/^v\d+$/.test(part))
-                      .join('.'),
-                  )
-                  .join(', ')
-                const condition = value.condition?.contentCondition || 'None'
-
-                return { name, status, action, triggers, condition, resourceName: p.name }
-              })
+              const ruleEntries = data.map(parseDlpRule)
 
               const summaryLines = ruleEntries.map(
                 r =>

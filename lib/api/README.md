@@ -16,39 +16,38 @@ limitations under the License.
 
 # lib/api
 
-Google Cloud and Workspace API clients. Each API has an interface and a real
-implementation. Tools depend on the interface so we can run integration tests
-against an in-process fake without changing client code.
+Google Cloud and Workspace API clients. Every API has a single client
+wrapper. Tools depend on these clients directly; for integration tests,
+we redirect them to an in-process fake HTTP server without changing tool
+code.
 
 ## Client pattern
 
-Every API has two files:
+Every API has a single file:
 
-- `interfaces/foo_client.js`: abstract base class. Methods throw
-  `Error('Not implemented')`. Tools program against the interface.
-- `real_foo_client.js`: production implementation. Authenticates through ADC and
+- `foo_client.js`: production implementation. Authenticates through ADC and
   calls the live Google API. Each method also accepts a bearer token,
   which when supplied takes the place of ADC.
 
-For tests, we instantiate the same `Real*Client` and redirect it at the
+For tests, we instantiate the same `*Client` class and redirect it at the
 fake API server in `test/helpers/fake-api-server.js`. The factory in
 `test/helpers/integration/tools/client_factory.js` does the wiring:
 
 ```js
 // Real backend (production / postsubmit): no args, uses ADC.
-new RealAdminSdkClient()
+new AdminSdkClient()
 
 // Fake backend (presubmit): same class, redirected through rootUrl + a fake
 // auth provider that short-circuits getAuthClient().
-new RealAdminSdkClient({ rootUrl, auth: fakeAuth })
+new AdminSdkClient({ rootUrl, auth: fakeAuth })
 ```
 
 `mcp-server.js` uses the same trick: when `GOOGLE_API_ROOT_URL` is set, it
-passes `rootUrl` into each Real client.
+passes `rootUrl` into each client.
 
 ## API domains
 
-| Domain            | Interface                     | APIs used                                                                                   |
+| Domain            | Client File                   | APIs used                                                                                   |
 | :---------------- | :---------------------------- | :------------------------------------------------------------------------------------------ |
 | Admin SDK         | `admin_sdk_client.js`         | Directory (org units, customer ID), Reports (activity logs), Licensing (CEP license checks) |
 | Chrome Management | `chrome_management_client.js` | Browser version counts, customer profiles                                                   |
@@ -58,16 +57,15 @@ passes `rootUrl` into each Real client.
 
 ## Adding a new API client
 
-1. Create `interfaces/new_client.js` with abstract methods.
-2. Create `real_new_client.js` that implements the interface using `googleapis`
+1. Create `new_client.js` that implements the client using `googleapis`
    or `@google-cloud/*`. Take an optional `apiOptions` argument and pass it
    through to your client constructor so `rootUrl` and `auth` overrides work.
-3. Wire the new client into `mcp-server.js` (both the
-   `GOOGLE_API_ROOT_URL`-set and unset branches construct the same Real
+2. Wire the new client into `mcp-server.js` (both the
+   `GOOGLE_API_ROOT_URL`-set and unset branches construct the same
    clients).
-4. Add the new client to `getApiClients()` in
+3. Add the new client to `getApiClients()` in
    `test/helpers/integration/tools/client_factory.js`. Mirror the existing
    pattern: instantiate with no args for the `real` branch, and with
    `{ rootUrl, auth: fakeAuth }` for the `fake` branch.
-5. Add HTTP handlers for the new API to `test/helpers/fake-api-server.js` so
+4. Add HTTP handlers for the new API to `test/helpers/fake-api-server.js` so
    the fake backend can serve the requests your client will make.

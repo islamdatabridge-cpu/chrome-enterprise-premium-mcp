@@ -33,8 +33,8 @@ describe('check_and_enable_cep_api tool', () => {
       '../../tools/definitions/check_and_enable_cep_api.js',
       {},
       {
-        '../../lib/api/real_service_usage_client.js': {
-          RealServiceUsageClient: class {
+        '../../lib/api/service_usage_client.js': {
+          ServiceUsageClient: class {
             constructor() {
               Object.assign(this, mockServiceUsageClient)
             }

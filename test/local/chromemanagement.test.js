@@ -43,8 +43,8 @@ describe('Chrome Management API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_chrome_management_client.js': {
-            RealChromeManagementClient: MockChromeManagementClient,
+          '../../lib/api/chrome_management_client.js': {
+            ChromeManagementClient: MockChromeManagementClient,
           },
         },
       )
@@ -81,8 +81,8 @@ describe('Chrome Management API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_chrome_management_client.js': {
-            RealChromeManagementClient: MockChromeManagementClient,
+          '../../lib/api/chrome_management_client.js': {
+            ChromeManagementClient: MockChromeManagementClient,
           },
         },
       )
@@ -117,8 +117,8 @@ describe('Chrome Management API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_chrome_management_client.js': {
-            RealChromeManagementClient: MockChromeManagementClient,
+          '../../lib/api/chrome_management_client.js': {
+            ChromeManagementClient: MockChromeManagementClient,
           },
         },
       )
@@ -151,8 +151,8 @@ describe('Chrome Management API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_chrome_management_client.js': {
-            RealChromeManagementClient: MockChromeManagementClient,
+          '../../lib/api/chrome_management_client.js': {
+            ChromeManagementClient: MockChromeManagementClient,
           },
         },
       )
@@ -169,10 +169,10 @@ describe('Chrome Management API', () => {
     })
   })
 
-  describe('RealChromeManagementClient authToken threading', () => {
+  describe('ChromeManagementClient authToken threading', () => {
     test('When countBrowserVersions is called with an authToken, then it is forwarded to getClient', async () => {
-      const { RealChromeManagementClient } = await import('../../lib/api/real_chrome_management_client.js')
-      const client = new RealChromeManagementClient()
+      const { ChromeManagementClient } = await import('../../lib/api/chrome_management_client.js')
+      const client = new ChromeManagementClient()
       let observedAuth = 'sentinel-not-set'
       client.getClient = async authToken => {
         observedAuth = authToken
@@ -189,8 +189,8 @@ describe('Chrome Management API', () => {
     })
 
     test('When listCustomerProfiles is called with an authToken, then it is forwarded to getClient', async () => {
-      const { RealChromeManagementClient } = await import('../../lib/api/real_chrome_management_client.js')
-      const client = new RealChromeManagementClient()
+      const { ChromeManagementClient } = await import('../../lib/api/chrome_management_client.js')
+      const client = new ChromeManagementClient()
       let observedAuth = 'sentinel-not-set'
       client.getClient = async authToken => {
         observedAuth = authToken

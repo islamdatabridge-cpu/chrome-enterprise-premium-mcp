@@ -15,11 +15,11 @@ limitations under the License.
 */
 
 import { OAuth2Client } from 'google-auth-library'
-import { RealAdminSdkClient } from '../../../../lib/api/real_admin_sdk_client.js'
-import { RealCloudIdentityClient } from '../../../../lib/api/real_cloud_identity_client.js'
-import { RealChromePolicyClient } from '../../../../lib/api/real_chrome_policy_client.js'
-import { RealChromeManagementClient } from '../../../../lib/api/real_chrome_management_client.js'
-import { RealServiceUsageClient } from '../../../../lib/api/real_service_usage_client.js'
+import { AdminSdkClient } from '../../../../lib/api/admin_sdk_client.js'
+import { CloudIdentityClient } from '../../../../lib/api/cloud_identity_client.js'
+import { ChromePolicyClient } from '../../../../lib/api/chrome_policy_client.js'
+import { ChromeManagementClient } from '../../../../lib/api/chrome_management_client.js'
+import { ServiceUsageClient } from '../../../../lib/api/service_usage_client.js'
 
 export function getApiClients(options = {}) {
   const backend = options.backend || process.env.CEP_BACKEND || (process.env.GOOGLE_API_ROOT_URL ? 'fake' : 'real')
@@ -28,11 +28,11 @@ export function getApiClients(options = {}) {
   if (backend === 'real') {
     console.log('[FACTORY] Using REAL API clients (Ambient Authority/ADC)')
     return {
-      adminSdk: new RealAdminSdkClient(),
-      cloudIdentity: new RealCloudIdentityClient(),
-      chromePolicy: new RealChromePolicyClient(),
-      chromeManagement: new RealChromeManagementClient(),
-      serviceUsage: new RealServiceUsageClient(),
+      adminSdk: new AdminSdkClient(),
+      cloudIdentity: new CloudIdentityClient(),
+      chromePolicy: new ChromePolicyClient(),
+      chromeManagement: new ChromeManagementClient(),
+      serviceUsage: new ServiceUsageClient(),
     }
   }
 
@@ -40,10 +40,10 @@ export function getApiClients(options = {}) {
   fakeAuth.setCredentials({ access_token: 'fake-integration-token' })
 
   return {
-    adminSdk: new RealAdminSdkClient({ rootUrl, auth: fakeAuth }),
-    cloudIdentity: new RealCloudIdentityClient({ rootUrl, auth: fakeAuth }),
-    chromePolicy: new RealChromePolicyClient({ rootUrl, auth: fakeAuth }),
-    chromeManagement: new RealChromeManagementClient({ rootUrl, auth: fakeAuth }),
-    serviceUsage: new RealServiceUsageClient({ rootUrl, auth: fakeAuth }),
+    adminSdk: new AdminSdkClient({ rootUrl, auth: fakeAuth }),
+    cloudIdentity: new CloudIdentityClient({ rootUrl, auth: fakeAuth }),
+    chromePolicy: new ChromePolicyClient({ rootUrl, auth: fakeAuth }),
+    chromeManagement: new ChromeManagementClient({ rootUrl, auth: fakeAuth }),
+    serviceUsage: new ServiceUsageClient({ rootUrl, auth: fakeAuth }),
   }
 }

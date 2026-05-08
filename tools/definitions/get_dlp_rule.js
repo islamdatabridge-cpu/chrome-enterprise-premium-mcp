@@ -20,17 +20,16 @@ limitations under the License.
 
 import { z } from 'zod'
 import { guardedToolCall, formatToolResponse, safeFormatResponse } from '../utils/wrapper.js'
-import { formatStatus } from '../../lib/util/helpers.js'
+import { parseDlpRule } from '../../lib/util/helpers.js'
 import { commonOutputSchemas } from './shared.js'
 import { TAGS } from '../../lib/constants.js'
 import { logger } from '../../lib/util/logger.js'
-import { CHROME_ACTION_TYPES } from '../../lib/util/chrome_dlp_constants.js'
 
 /**
  * Registers the 'get_dlp_rule' tool with the MCP server.
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server - The MCP server instance.
  * @param {object} options - Configuration options for the tool.
- * @param {import('../../lib/api/interfaces/cloud_identity_client.js').CloudIdentityClient} options.cloudIdentityClient - The Cloud Identity client instance.
+ * @param {import('../../lib/api/cloud_identity_client.js').CloudIdentityClient} options.cloudIdentityClient - The Cloud Identity client instance.
  * @param {object} sessionState - The session state object for caching.
  * @returns {void}
  */
@@ -70,28 +69,14 @@ export function registerGetDlpRuleTool(server, options, sessionState) {
             rawData: policy,
             toolName: 'get_dlp_rule',
             formatFn: data => {
-              const setting = data.setting || {}
-              const value = setting.value || {}
-
-              const name = value.displayName || setting.displayName || data.displayName || 'Unnamed Rule'
-              const status = formatStatus(value.state || setting.state)
-
-              let action = 'Unknown'
-              const chromeAction = value.action?.chromeAction || {}
-              const foundAction = Object.values(CHROME_ACTION_TYPES).find(a => chromeAction[a.apiKey])
-              if (foundAction) {
-                action = foundAction.value.charAt(0).toUpperCase() + foundAction.value.slice(1).toLowerCase()
-              }
-
-              const triggers = (value.triggers || []).map(t => t.replace(/^chrome\.dlp\.(v\d\.)?/, '')).join(', ')
-              const condition = value.condition?.contentCondition || 'None'
+              const rule = parseDlpRule(data)
               const uiLink = `https://admin.google.com/ac/dp/rules/${encodeURIComponent(data.name)}`
 
-              const summary = `## DLP Rule: ${name}
-- **Status**: ${status}
-- **Action**: ${action}
-- **Triggers**: ${triggers}
-- **Condition**: \`${condition}\`
+              const summary = `## DLP Rule: ${rule.name}
+- **Status**: ${rule.status}
+- **Action**: ${rule.action}
+- **Triggers**: ${rule.triggers}
+- **Condition**: \`${rule.condition}\`
 - **Resource Name**: \`${data.name}\`
 
 💡 To **disable** or **delete** this rule, manage it in the Admin Console: [Manage in UI](${uiLink})`

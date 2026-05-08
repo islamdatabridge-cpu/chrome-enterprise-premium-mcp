@@ -21,7 +21,7 @@ limitations under the License.
 import { z } from 'zod'
 import { guardedToolCall, formatToolResponse, safeFormatResponse } from '../utils/wrapper.js'
 import { CONNECTOR_KEY_MAPPING, POLICY_DISPLAY_NAMES } from '../../lib/constants.js'
-import { ConnectorPolicyFilter } from '../../lib/api/real_chrome_policy_client.js'
+import { ConnectorPolicyFilter } from '../../lib/api/chrome_policy_client.js'
 import { analyzeConnectorPolicy, humanize } from '../../lib/util/connector_policy_helper.js'
 
 /**
@@ -158,7 +158,7 @@ function processSinglePolicy(policyKey, raw) {
  * Registers the 'get_connector_policy' tool with the MCP server.
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server - The MCP server instance.
  * @param {object} options - Configuration options for the tool.
- * @param {import('../../lib/api/interfaces/chrome_policy_client.js').ChromePolicyClient} options.chromePolicyClient - The Chrome Policy client instance.
+ * @param {import('../../lib/api/chrome_policy_client.js').ChromePolicyClient} options.chromePolicyClient - The Chrome Policy client instance.
  * @param {object} sessionState - The session state object for caching.
  * @returns {void}
  */
