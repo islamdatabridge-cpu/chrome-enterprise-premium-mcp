@@ -32,13 +32,40 @@ describe('delete_agent_dlp_rule tool handler', () => {
     return registeredHandler
   }
 
+  test('When rule is agent-created, then deleteDlpRule (with re-validation) is NOT called', async () => {
+    let getCalls = 0
+    let preValidatedCalls = 0
+    let validatedCalls = 0
+    const mockCloudIdentityClient = {
+      getDlpRule: async () => {
+        getCalls++
+        return { setting: { value: { displayName: '🤖 Agent Rule' } } }
+      },
+      deleteDlpRulePreValidated: async () => {
+        preValidatedCalls++
+        return {}
+      },
+      deleteDlpRule: async () => {
+        validatedCalls++
+        return {}
+      },
+    }
+
+    const handler = getHandler(mockCloudIdentityClient)
+    await handler({ policyName: 'policies/akabc123' }, { authToken: 'token-abc' })
+
+    assert.strictEqual(getCalls, 1, 'getDlpRule should be called exactly once (no double policies.get)')
+    assert.strictEqual(preValidatedCalls, 1, 'deleteDlpRulePreValidated should be called once')
+    assert.strictEqual(validatedCalls, 0, 'deleteDlpRule (the re-validating path) should NOT be called')
+  })
+
   test('When rule is agent-created, then it deletes the rule and returns success message', async () => {
     let deleteCalled = false
     const mockCloudIdentityClient = {
       getDlpRule: async () => ({
         setting: { value: { displayName: '🤖 Agent Rule' } },
       }),
-      deleteDlpRule: async () => {
+      deleteDlpRulePreValidated: async () => {
         deleteCalled = true
         return {}
       },
@@ -47,7 +74,7 @@ describe('delete_agent_dlp_rule tool handler', () => {
     const handler = getHandler(mockCloudIdentityClient)
     const result = await handler({ policyName: 'policies/akabc123' }, { authToken: 'token-abc' })
 
-    assert.ok(deleteCalled, 'deleteDlpRule should have been called')
+    assert.ok(deleteCalled, 'deleteDlpRulePreValidated should have been called')
     assert.ok(result.content[0].text.includes('has been successfully deleted'))
     assert.ok(result.content[0].text.includes('policies/akabc123'))
   })
@@ -58,7 +85,7 @@ describe('delete_agent_dlp_rule tool handler', () => {
       getDlpRule: async () => ({
         setting: { value: { displayName: 'Manual Rule' } },
       }),
-      deleteDlpRule: async () => {
+      deleteDlpRulePreValidated: async () => {
         deleteCalled = true
         return {}
       },
@@ -67,7 +94,7 @@ describe('delete_agent_dlp_rule tool handler', () => {
     const handler = getHandler(mockCloudIdentityClient)
     const result = await handler({ policyName: 'policies/akabc123' }, { authToken: 'token-abc' })
 
-    assert.ok(!deleteCalled, 'deleteDlpRule should NOT have been called')
+    assert.ok(!deleteCalled, 'deleteDlpRulePreValidated should NOT have been called')
     assert.ok(result.content[0].text.includes('Admin Console'))
     assert.ok(
       result.content[0].text.includes('policies/akabc123') || result.content[0].text.includes('policies%2Fakabc123'),
@@ -83,7 +110,7 @@ describe('delete_agent_dlp_rule tool handler', () => {
       getDlpRule: async () => {
         throw notFoundError
       },
-      deleteDlpRule: async () => ({}),
+      deleteDlpRulePreValidated: async () => ({}),
     }
 
     const handler = getHandler(mockCloudIdentityClient)
@@ -102,7 +129,7 @@ describe('delete_agent_dlp_rule tool handler', () => {
       getDlpRule: async () => {
         throw notFoundError
       },
-      deleteDlpRule: async () => ({}),
+      deleteDlpRulePreValidated: async () => ({}),
     }
 
     const handler = getHandler(mockCloudIdentityClient)
@@ -121,7 +148,7 @@ describe('delete_agent_dlp_rule tool handler', () => {
       getDlpRule: async () => {
         throw transientError
       },
-      deleteDlpRule: async () => ({}),
+      deleteDlpRulePreValidated: async () => ({}),
     }
 
     const handler = getHandler(mockCloudIdentityClient)

@@ -67,7 +67,7 @@ describe('Experiment: DELETE_TOOL_ENABLED', () => {
       const mockDeleteDlpRule = mock.fn(async () => ({}))
       const MockCloudIdentityClient = class {
         constructor() {
-          this.deleteDlpRule = mockDeleteDlpRule
+          this.deleteDlpRulePreValidated = mockDeleteDlpRule
           this.getDlpRule = mock.fn(async () => ({
             setting: { value: { displayName: '🤖 Test Rule' } },
           }))

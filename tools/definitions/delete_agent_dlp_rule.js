@@ -84,7 +84,7 @@ export function registerDeleteAgentDlpRuleTool(server, options, sessionState) {
           const isAgentCreated = displayName.startsWith(AGENT_DISPLAY_NAME_PREFIX)
 
           if (isAgentCreated) {
-            await cloudIdentityClient.deleteDlpRule(policyName, authToken)
+            await cloudIdentityClient.deleteDlpRulePreValidated(policyName, authToken)
             logger.debug(`${TAGS.MCP} Successfully deleted agent-created DLP rule: ${policyName}`)
           }
 
