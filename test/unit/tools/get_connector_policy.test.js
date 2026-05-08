@@ -1153,4 +1153,275 @@ describe('get_connector_policy tool handler', () => {
     assert.match(summary, /⚠️ Malware Analysis is restricted. Scanning is DISABLED for specific URL patterns/)
     assert.match(summary, /⚠️ Sensitive Analysis is restricted. Scanning is NOT enabled for all files/)
   })
+
+  test('When policy is ALL, then it retrieves all connectors and handles errors gracefully if a connector fetch fails', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async (customerId, orgUnitId, policy) => {
+        if (policy === 'chrome.users.OnFileAttachedConnectorPolicy') {
+          return [
+            {
+              value: {
+                value: {
+                  serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                  delayDeliveryUntilVerdict: true,
+                },
+              },
+            },
+          ]
+        }
+        if (policy === 'chrome.users.OnSecurityEvent') {
+          throw new Error('Database network failure')
+        }
+        return []
+      },
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler({ customerId: 'C123', orgUnitId: 'OU123', policy: 'ALL' }, { requestInfo: {} })
+
+    assert.strictEqual(result.isError, true)
+    assert.match(result.content[0].text, /Database network failure/)
+  })
+
+  test('When policy is ALL, then it retrieves all connectors and returns the unified and structured data', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async (customerId, orgUnitId, policy) => {
+        if (policy === 'chrome.users.OnFileAttachedConnectorPolicy') {
+          return [
+            {
+              value: {
+                value: {
+                  serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                  delayDeliveryUntilVerdict: true,
+                },
+              },
+            },
+          ]
+        }
+        if (policy === 'chrome.users.OnFileDownloadedConnectorPolicy') {
+          return [
+            {
+              value: {
+                value: {
+                  serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                  delayDeliveryUntilVerdict: true,
+                },
+              },
+            },
+          ]
+        }
+        if (policy === 'chrome.users.OnBulkTextEntryConnectorPolicy') {
+          return [
+            {
+              value: {
+                value: {
+                  serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                  minimumDataLength: 100,
+                },
+              },
+            },
+          ]
+        }
+        if (policy === 'chrome.users.OnPrintAnalysisConnectorPolicy') {
+          return [
+            {
+              value: {
+                value: {
+                  onPrintAnalysisConnectorConfiguration: {
+                    printConfigurations: [
+                      {
+                        serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                        delayDeliveryUntilVerdict: true,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ]
+        }
+        if (policy === 'chrome.users.RealtimeUrlCheck') {
+          return [
+            {
+              value: {
+                value: {
+                  realtimeUrlCheckEnabled: 'ENTERPRISE_REAL_TIME_URL_CHECK_MODE_ENUM_ENABLED',
+                },
+              },
+            },
+          ]
+        }
+        if (policy === 'chrome.users.OnSecurityEvent') {
+          return [
+            {
+              value: {
+                value: {
+                  reportingConnector: {
+                    serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                    eventConfiguration: {
+                      enabledEventNames: [
+                        'contentTransferEvent',
+                        'unscannedFileEvent',
+                        'dangerousDownloadEvent',
+                        'sensitiveDataEvent',
+                        'interstitialEvent',
+                        'urlFilteringInterstitialEvent',
+                        'suspiciousUrlEvent',
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          ]
+        }
+        return []
+      },
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler({ customerId: 'C123', orgUnitId: 'OU123', policy: 'ALL' }, { requestInfo: {} })
+
+    const summary = result.content[0].text
+
+    // Verify summary displays all connectors correctly
+    assert.match(summary, /Upload Content Analysis \(ON_FILE_ATTACHED\):\*\* 🟢 Configured/)
+    assert.match(summary, /File Download Analysis \(ON_FILE_DOWNLOAD\):\*\* 🟢 Configured/)
+    assert.match(summary, /Bulk Text Entry Analysis \(paste\) \(ON_BULK_TEXT_ENTRY\):\*\* 🟢 Configured/)
+    assert.match(summary, /Print Analysis \(ON_PRINT\):\*\* 🟢 Configured/)
+    assert.match(summary, /Real-Time URL Check \(ON_REALTIME_URL_NAVIGATION\):\*\* 🟢 Configured/)
+    assert.match(summary, /Event Reporting \(ON_SECURITY_EVENT\):\*\* 🟢 Configured/)
+
+    // Verify structured output elements
+    assert.strictEqual(result.structuredContent.configured, true)
+    assert.strictEqual(result.structuredContent.connectorType, 'ALL')
+
+    // Verify connectors object
+    assert.ok(result.structuredContent.connectors)
+    const attachment = result.structuredContent.connectors.ON_FILE_ATTACHED
+    assert.strictEqual(attachment.configured, true)
+    assert.strictEqual(
+      attachment.connectorPolicies[0]["serviceProvider (describe to user as 'Provider')"],
+      'Chrome Enterprise Premium',
+    )
+
+    assert.strictEqual(result.structuredContent.connectors.ON_FILE_DOWNLOAD.configured, true)
+    assert.strictEqual(result.structuredContent.connectors.ON_BULK_TEXT_ENTRY.configured, true)
+    assert.strictEqual(result.structuredContent.connectors.ON_PRINT.configured, true)
+    assert.strictEqual(result.structuredContent.connectors.ON_REALTIME_URL_NAVIGATION.configured, true)
+    assert.strictEqual(result.structuredContent.connectors.ON_SECURITY_EVENT.configured, true)
+  })
+
+  test('When policy is ALL, then it handles a mix of configured, unconfigured, and warning states across connectors correctly', async () => {
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async (customerId, orgUnitId, policy) => {
+        // ON_FILE_ATTACHED: Configured but has a warning (delay delivery disabled)
+        if (policy === 'chrome.users.OnFileAttachedConnectorPolicy') {
+          return [
+            {
+              value: {
+                value: {
+                  serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                  delayDeliveryUntilVerdict: false,
+                },
+              },
+            },
+          ]
+        }
+        // ON_FILE_DOWNLOAD: Configured (Good state)
+        if (policy === 'chrome.users.OnFileDownloadedConnectorPolicy') {
+          return [
+            {
+              value: {
+                value: {
+                  serviceProvider: 'SERVICE_PROVIDER_CHROME_ENTERPRISE_PREMIUM',
+                  delayDeliveryUntilVerdict: true,
+                },
+              },
+            },
+          ]
+        }
+        // ON_PRINT: 3P provider (Trellix)
+        if (policy === 'chrome.users.OnPrintAnalysisConnectorPolicy') {
+          return [
+            {
+              value: {
+                value: {
+                  onPrintAnalysisConnectorConfiguration: {
+                    printConfigurations: [
+                      {
+                        serviceProvider: 'SERVICE_PROVIDER_TRELLIX',
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ]
+        }
+        // Realtime check: explicitly disabled (Not Configured + warning)
+        if (policy === 'chrome.users.RealtimeUrlCheck') {
+          return [
+            {
+              value: {
+                value: {
+                  realtimeUrlCheckEnabled: 'ENTERPRISE_REAL_TIME_URL_CHECK_MODE_ENUM_DISABLED',
+                },
+              },
+            },
+          ]
+        }
+        // Others are unconfigured (empty array)
+        return []
+      },
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler({ customerId: 'C123', orgUnitId: 'OU123', policy: 'ALL' }, { requestInfo: {} })
+
+    const summary = result.content[0].text
+
+    // Verify summary displays a correct mix of statuses
+    assert.match(summary, /Upload Content Analysis \(ON_FILE_ATTACHED\):\*\* 🟢 Configured/)
+    assert.match(summary, /File Download Analysis \(ON_FILE_DOWNLOAD\):\*\* 🟢 Configured/)
+    assert.match(summary, /Bulk Text Entry Analysis \(paste\) \(ON_BULK_TEXT_ENTRY\):\*\* ⚪ Not configured/)
+    assert.match(summary, /Print Analysis \(ON_PRINT\):\*\* 🟢 Configured/)
+    assert.match(summary, /Real-Time URL Check \(ON_REALTIME_URL_NAVIGATION\):\*\* ⚪ Not configured/)
+    assert.match(summary, /Event Reporting \(ON_SECURITY_EVENT\):\*\* ⚪ Not configured/)
+
+    // Verify warnings list includes specific warning messages
+    assert.match(summary, /\[Upload Content Analysis\] Delay enforcement is disabled/)
+    assert.match(summary, /\[Real-Time URL Check\] Real-time URL check is explicitly disabled/)
+    assert.match(summary, /\[Print Analysis\] 3rd party provider detected/)
+
+    // Verify structured output details
+    assert.strictEqual(result.structuredContent.configured, true) // Still configured overall since at least one is configured
+    assert.strictEqual(result.structuredContent.connectors.ON_FILE_ATTACHED.configured, true)
+    assert.strictEqual(result.structuredContent.connectors.ON_FILE_DOWNLOAD.configured, true)
+    assert.strictEqual(result.structuredContent.connectors.ON_PRINT.configured, true)
+    assert.strictEqual(result.structuredContent.connectors.ON_REALTIME_URL_NAVIGATION.configured, false)
+    assert.strictEqual(result.structuredContent.connectors.ON_BULK_TEXT_ENTRY.configured, false)
+    assert.strictEqual(result.structuredContent.connectors.ON_SECURITY_EVENT.configured, false)
+  })
+
+  test('When policy is omitted, then it defaults to ALL and retrieves all connector policies', async () => {
+    const calledPolicies = []
+    const mockChromePolicyClient = {
+      getConnectorPolicy: async (customerId, orgUnitId, policy) => {
+        calledPolicies.push(policy)
+        return []
+      },
+    }
+
+    const handler = getHandler(mockChromePolicyClient)
+
+    const result = await handler({ customerId: 'C123', orgUnitId: 'OU123' }, { requestInfo: {} })
+
+    // Should fetch all 6 connector policy filters since it defaulted to ALL
+    assert.strictEqual(calledPolicies.length, 6)
+    assert.strictEqual(result.structuredContent.connectorType, 'ALL')
+  })
 })
