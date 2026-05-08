@@ -8,7 +8,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@google/chrome-enterprise-premium-mcp@^1.2.0"
+        "@google/chrome-enterprise-premium-mcp@^1.4.0"
       ]
     }
   }
