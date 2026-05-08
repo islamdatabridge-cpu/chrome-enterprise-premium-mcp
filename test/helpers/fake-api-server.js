@@ -618,6 +618,15 @@ export function createFakeApp() {
 
   // Service Usage: Get Service
   app.get('/v1/projects/:projectId/services/:serviceName', (req, res) => {
+    if (state.serviceUsage['serviceusage.googleapis.com'] === 'DISABLED') {
+      return res.status(403).json({
+        error: {
+          code: 403,
+          message: `Service Usage API has not been used in project [${req.params.projectId}] before or it is disabled. Enable it by visiting https://console.cloud.google.com/apis/library/serviceusage.googleapis.com?project=${req.params.projectId} then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.`,
+          status: 'PERMISSION_DENIED',
+        },
+      })
+    }
     const stateVal = state.serviceUsage[req.params.serviceName] || 'DISABLED'
     res.json({
       name: `projects/${req.params.projectId}/services/${req.params.serviceName}`,
@@ -627,6 +636,15 @@ export function createFakeApp() {
 
   // Service Usage: Enable Service
   app.post('/v1/projects/:projectId/services/:serviceName\\:enable', (req, res) => {
+    if (state.serviceUsage['serviceusage.googleapis.com'] === 'DISABLED') {
+      return res.status(403).json({
+        error: {
+          code: 403,
+          message: `Service Usage API has not been used in project [${req.params.projectId}] before or it is disabled. Enable it by visiting https://console.cloud.google.com/apis/library/serviceusage.googleapis.com?project=${req.params.projectId} then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.`,
+          status: 'PERMISSION_DENIED',
+        },
+      })
+    }
     state.serviceUsage[req.params.serviceName] = 'ENABLED'
     res.json({
       done: true,
