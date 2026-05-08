@@ -1,4 +1,5 @@
 test/evals/cases/**/*.md
+CHANGELOG.md
 results.json
 results_final.json
 .claude/
