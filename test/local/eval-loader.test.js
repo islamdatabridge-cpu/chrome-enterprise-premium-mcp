@@ -47,36 +47,34 @@ describe('Eval Loader', () => {
   describe('loadEvalsFromFile', () => {
     test('When a markdown eval file with multiple cases is parsed, then it returns all cases', () => {
       const config = loadGlobalConfig(evalsDir)
-      const evalFile = path.join(evalsDir, 'cases', 'docs', '0-agent-capabilities.md')
+      const evalFile = path.join(evalsDir, 'cases', 'system', 'experiments.md')
       const evals = loadEvalsFromFile(evalFile, config)
 
-      assert.ok(evals.length >= 3, 'should find multiple eval cases in consolidated file')
-      const k01 = evals.find(e => e.id === 'k01')
-      assert.ok(k01)
-      assert.strictEqual(k01.id, 'k01')
-      assert.strictEqual(k01.category, 'knowledge')
-      assert.deepStrictEqual(k01.tags, ['overview'])
-      assert.ok(k01.prompt.includes('What is Chrome Enterprise Premium'))
-      assert.ok(k01.goldenResponse.includes('Chrome Enterprise Premium (CEP)'))
+      assert.ok(evals.length >= 2, 'should find multiple eval cases in consolidated file')
+      const sys01 = evals.find(e => e.id === 'sys-01')
+      assert.ok(sys01)
+      assert.strictEqual(sys01.id, 'sys-01')
+      assert.strictEqual(sys01.category, 'system')
+      assert.ok(sys01.prompt.includes("'delete_agent_dlp_rule'"))
+      assert.ok(sys01.goldenResponse.toLowerCase().includes('no'))
     })
 
     test('When evals are loaded from file, then they inherit global forbidden patterns', () => {
       const config = loadGlobalConfig(evalsDir)
-      const evalFile = path.join(evalsDir, 'cases', 'docs', '0-agent-capabilities.md')
+      const evalFile = path.join(evalsDir, 'cases', 'system', 'experiments.md')
       const evals = loadEvalsFromFile(evalFile, config)
-      const k01 = evals.find(e => e.id === 'k01')
+      const sys01 = evals.find(e => e.id === 'sys-01')
 
-      // Should include global patterns
-      assert.ok(k01.forbiddenPatterns.includes('google.workspace.chrome.file.v1.upload'))
+      assert.ok(sys01.forbiddenPatterns.includes('google.workspace.chrome.file.v1.upload'))
     })
 
     test('When evals are loaded from file, then it extracts required_patterns from frontmatter', () => {
       const config = loadGlobalConfig(evalsDir)
-      const evalFile = path.join(evalsDir, 'cases', 'docs', '1-product-and-licensing.md')
+      const evalFile = path.join(evalsDir, 'cases', 'tools', 'get_customer_id.md')
       const evals = loadEvalsFromFile(evalFile, config)
-      const k03 = evals.find(e => e.id === 'k03')
+      const d01 = evals.find(e => e.id === 'd01')
 
-      assert.ok(k03.requiredPatterns.includes('$6'))
+      assert.ok(d01.requiredPatterns.includes('C01b1e65b'))
     })
   })
 
