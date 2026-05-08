@@ -15,41 +15,15 @@ limitations under the License.
 */
 
 /**
- * @file Loads eval cases from disk into structured EvalCase objects.
- * Two formats are supported during the migration:
- *   - Legacy: `.md` files with YAML frontmatter and `--- CASE ---` delimiters.
- *   - Current: `.eval.js` files exporting a default object per case.
- * See test/evals/README.md and docs/evals/format.md for the current spec.
+ * @file Loads eval cases from `.eval.js` files into structured EvalCase
+ * objects. Each case file lives at `test/evals/cases/<category>/<id>-<slug>.eval.js`
+ * and default-exports its case object. See docs/evals/format.md for the spec.
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import yaml from 'js-yaml'
-
-/** Helpers */
-
-/**
- * Extracts a named ## section from markdown body text.
- * Returns the content between the heading and the next ## heading (or EOF).
- * @param body
- * @param heading
- */
-function extractSection(body, heading) {
-  const pattern = new RegExp(`^##\\s+${heading}\\s*$`, 'im')
-  const match = body.match(pattern)
-  if (!match) {
-    return null
-  }
-
-  const start = match.index + match[0].length
-  const rest = body.slice(start)
-  const nextHeading = rest.search(/^##\s+/m)
-  const content = nextHeading === -1 ? rest : rest.slice(0, nextHeading)
-  return content.trim() || null
-}
-
-/** Public API */
 
 /**
  * Loads the global eval config from global.yaml.
@@ -64,84 +38,6 @@ export function loadGlobalConfig(evalsDir) {
     forbiddenPatterns: config.forbidden_patterns || [],
     defaultJudgeRubric: config.default_judge_rubric || '',
   }
-}
-
-/**
- * Loads one or more evals from a Markdown file.
- * Multiple evals are separated by '--- CASE ---' delimiters.
- * Each block starts with YAML metadata, followed by Markdown body starting at the first '## '.
- * @param {string} filepath - Absolute path to the .md file.
- * @param {{ forbiddenPatterns: string[], defaultJudgeRubric: string }} globalConfig
- * @returns {EvalCase[]}
- */
-export function loadEvalsFromFile(filepath, globalConfig) {
-  const raw = fs.readFileSync(filepath, 'utf8')
-
-  // Split by case delimiter
-  const cases = raw.split(/^--- CASE ---$/m)
-  const evals = []
-
-  for (let caseBlock of cases) {
-    caseBlock = caseBlock.trim()
-    if (!caseBlock) {
-      continue
-    }
-
-    // Split metadata (YAML) from body (Markdown) at the first occurrence of '## '
-    const firstHeadingIdx = caseBlock.indexOf('## ')
-    if (firstHeadingIdx === -1) {
-      console.warn(`[eval-loader] Skipping block in ${filepath}: No '## ' heading found.`)
-      continue
-    }
-
-    const yamlPart = caseBlock.substring(0, firstHeadingIdx).trim().replace(/^---/, '').replace(/---$/, '')
-    const body = caseBlock.substring(firstHeadingIdx)
-
-    let frontmatter
-    try {
-      frontmatter = yaml.load(yamlPart) || {}
-    } catch (err) {
-      console.error(`[eval-loader] YAML error in ${filepath}:`, err.message)
-      continue
-    }
-
-    if (!frontmatter.id) {
-      console.warn(`[eval-loader] Skipping block in ${filepath}: Missing 'id' in metadata.`)
-      continue
-    }
-
-    const perEvalForbidden = frontmatter.forbidden_patterns || []
-    const mergedForbidden = frontmatter.forbidden_patterns_override
-      ? perEvalForbidden
-      : [...globalConfig.forbiddenPatterns, ...perEvalForbidden]
-
-    const evalId = String(frontmatter.id)
-    if (frontmatter.scenario && frontmatter.fixtures && frontmatter.fixtures.length > 0) {
-      throw new Error(
-        `Eval case ${evalId} sets both \`fixtures:\` and \`scenario:\` — these are mutually exclusive (scenario replaces state, fixtures merge into state). Pick one.`,
-      )
-    }
-
-    evals.push({
-      id: evalId,
-      category: frontmatter.category || path.basename(path.dirname(filepath)),
-      priority: (frontmatter.priority || 'P2').toUpperCase(),
-      tags: frontmatter.tags || [],
-      expectedTools: frontmatter.expected_tools || [],
-      forbiddenPatterns: mergedForbidden,
-      requiredPatterns: frontmatter.required_patterns || [],
-      scenario: frontmatter.scenario || null,
-      promptName: frontmatter.prompt_name || null,
-      fixtures: frontmatter.fixtures || [],
-      experiments: frontmatter.experiments || null,
-      prompt: extractSection(body, 'Prompt') || '',
-      goldenResponse: extractSection(body, 'Golden Response') || '',
-      judgeInstructions: extractSection(body, 'Judge Instructions'),
-      sourceFile: filepath,
-    })
-  }
-
-  return evals
 }
 
 const ID_PATTERN = /^[A-Za-z0-9_]+$/
@@ -229,7 +125,6 @@ export async function loadEvalAsCodeFromFile(filepath, globalConfig) {
 
 /**
  * Loads all evals from the cases/ subdirectories, with optional filtering.
- * Walks both legacy `.md` files and current `.eval.js` files.
  * @param {object} options
  * @param {string} options.dir - Path to test/evals directory.
  * @param {string} [options.category] - Comma-separated category filter.
@@ -242,7 +137,6 @@ export async function loadAllEvals({ dir, category, tags, ids, priority }) {
   const globalConfig = loadGlobalConfig(dir)
   const casesDir = path.join(dir, 'cases')
 
-  const mdFiles = []
   const jsFiles = []
   const walk = d => {
     for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
@@ -251,16 +145,12 @@ export async function loadAllEvals({ dir, category, tags, ids, priority }) {
         walk(full)
       } else if (entry.name.endsWith('.eval.js')) {
         jsFiles.push(full)
-      } else if (entry.name.endsWith('.md')) {
-        mdFiles.push(full)
       }
     }
   }
   walk(casesDir)
 
-  const fromMd = mdFiles.flatMap(f => loadEvalsFromFile(f, globalConfig))
-  const fromJs = await Promise.all(jsFiles.map(f => loadEvalAsCodeFromFile(f, globalConfig)))
-  let evals = [...fromMd, ...fromJs]
+  let evals = await Promise.all(jsFiles.map(f => loadEvalAsCodeFromFile(f, globalConfig)))
 
   const seen = new Map()
   for (const e of evals) {
@@ -315,5 +205,6 @@ export async function loadAllEvals({ dir, category, tags, ids, priority }) {
  * @property {string} goldenResponse
  * @property {string|null} judgeInstructions
  * @property {string[]} fixtures
+ * @property {object|null} experiments
  * @property {string} sourceFile
  */

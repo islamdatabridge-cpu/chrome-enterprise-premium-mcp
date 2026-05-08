@@ -20,7 +20,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadGlobalConfig, loadEvalsFromFile, loadAllEvals, loadEvalAsCodeFromFile } from '../evals/lib/loader.js'
+import { loadGlobalConfig, loadAllEvals, loadEvalAsCodeFromFile } from '../evals/lib/loader.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const evalsDir = path.resolve(__dirname, '..', 'evals')
@@ -41,87 +41,6 @@ describe('Eval Loader', () => {
       const config = loadGlobalConfig(evalsDir)
       assert.ok(typeof config.defaultJudgeRubric === 'string')
       assert.ok(config.defaultJudgeRubric.length > 0)
-    })
-  })
-
-  describe('loadEvalsFromFile', () => {
-    function writeTmpMarkdown(content) {
-      const file = path.join(os.tmpdir(), `eval-md-${Date.now()}-${Math.random()}.md`)
-      fs.writeFileSync(file, content, 'utf8')
-      return file
-    }
-
-    test('When a markdown eval file with multiple cases is parsed, then it returns all cases', () => {
-      const config = loadGlobalConfig(evalsDir)
-      const file = writeTmpMarkdown(
-        [
-          '--- CASE ---',
-          'id: tmp_a',
-          'category: system',
-          'tags: [smoke]',
-          '## Prompt',
-          'first prompt',
-          '## Golden Response',
-          'first response',
-          '--- CASE ---',
-          'id: tmp_b',
-          'category: system',
-          '## Prompt',
-          'second prompt',
-          '## Golden Response',
-          'second response',
-        ].join('\n'),
-      )
-      try {
-        const evals = loadEvalsFromFile(file, config)
-        assert.strictEqual(evals.length, 2)
-        const a = evals.find(e => e.id === 'tmp_a')
-        assert.ok(a)
-        assert.strictEqual(a.category, 'system')
-        assert.deepStrictEqual(a.tags, ['smoke'])
-        assert.strictEqual(a.prompt, 'first prompt')
-        assert.strictEqual(a.goldenResponse, 'first response')
-      } finally {
-        fs.unlinkSync(file)
-      }
-    })
-
-    test('When evals are loaded from file, then they inherit global forbidden patterns', () => {
-      const config = loadGlobalConfig(evalsDir)
-      const file = writeTmpMarkdown(
-        ['--- CASE ---', 'id: inherit_globals', 'category: system', '## Prompt', 'p', '## Golden Response', 'g'].join(
-          '\n',
-        ),
-      )
-      try {
-        const [c] = loadEvalsFromFile(file, config)
-        assert.ok(c.forbiddenPatterns.includes('google.workspace.chrome.file.v1.upload'))
-      } finally {
-        fs.unlinkSync(file)
-      }
-    })
-
-    test('When evals are loaded from file, then it extracts required_patterns from frontmatter', () => {
-      const config = loadGlobalConfig(evalsDir)
-      const file = writeTmpMarkdown(
-        [
-          '--- CASE ---',
-          'id: req_patterns',
-          'category: system',
-          'required_patterns:',
-          '  - gcloud auth application-default login',
-          '## Prompt',
-          'p',
-          '## Golden Response',
-          'g',
-        ].join('\n'),
-      )
-      try {
-        const [c] = loadEvalsFromFile(file, config)
-        assert.ok(c.requiredPatterns.includes('gcloud auth application-default login'))
-      } finally {
-        fs.unlinkSync(file)
-      }
     })
   })
 
@@ -273,35 +192,6 @@ describe('Eval Loader', () => {
         )
       } finally {
         fs.unlinkSync(file)
-      }
-    })
-  })
-
-  describe('mutual exclusion of fixtures and scenario', () => {
-    test('When a case sets both fixtures and scenario, then loading throws a clear error', () => {
-      const config = loadGlobalConfig(evalsDir)
-      const content = [
-        'id: mutex-test',
-        'scenario: some-scenario',
-        'fixtures:',
-        '  - some-fixture.json',
-        '',
-        '## Prompt',
-        '',
-        'test prompt',
-      ].join('\n')
-      const tmpFile = path.join(os.tmpdir(), `eval-mutex-test-${Date.now()}.md`)
-      fs.writeFileSync(tmpFile, content, 'utf8')
-      try {
-        assert.throws(
-          () => loadEvalsFromFile(tmpFile, config),
-          err =>
-            err.message.includes('mutex-test') &&
-            err.message.includes('fixtures:') &&
-            err.message.includes('scenario:'),
-        )
-      } finally {
-        fs.unlinkSync(tmpFile)
       }
     })
   })
