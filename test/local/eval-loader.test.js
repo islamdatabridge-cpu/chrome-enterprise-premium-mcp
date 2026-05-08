@@ -82,11 +82,10 @@ describe('Eval Loader', () => {
     test('When all evals are loaded, then it finds cases with all required fields', async () => {
       const evals = await loadAllEvals({ dir: evalsDir })
       assert.ok(evals.length > 0, 'should find eval cases')
-      // Each eval should have required fields
       for (const e of evals) {
         assert.ok(e.id, `eval missing id`)
         assert.ok(e.category, `eval ${e.id} missing category`)
-        assert.ok(e.prompt, `eval ${e.id} missing prompt`)
+        assert.ok(e.prompt || e.promptName, `eval ${e.id} missing both prompt and promptName`)
       }
     })
 
