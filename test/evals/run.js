@@ -125,7 +125,7 @@ async function main() {
   const delayMs = parseInt(args.delay, 10) || 0
 
   // Load evals
-  const evals = loadAllEvals({ dir: evalsDir, category, tags, ids, priority })
+  const evals = await loadAllEvals({ dir: evalsDir, category, tags, ids, priority })
   if (evals.length === 0) {
     console.error('No evals matched the given filters.')
     process.exit(1)
