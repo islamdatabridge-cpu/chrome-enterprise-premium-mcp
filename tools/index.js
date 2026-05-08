@@ -51,7 +51,7 @@ import { featureFlags, FLAGS } from '../lib/util/feature_flags.js'
  * Registers all tools with the MCP server.
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server - The MCP server instance.
  * @param {object} options - Configuration options for the tools.
- * @param {import('../lib/api/interfaces/api_clients.js').ApiClients} [options.apiClients] - The API clients collection.
+ * @param {import('../lib/api/api_clients.js').ApiClients} [options.apiClients] - The API clients collection.
  * @param {import('../lib/util/feature_flags.js').FeatureFlags} [options.featureFlags] - The feature flags manager.
  * @param {object} [sessionState] - The session state object for caching.
  */

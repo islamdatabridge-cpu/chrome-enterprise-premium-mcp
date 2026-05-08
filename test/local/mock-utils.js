@@ -25,8 +25,8 @@ export async function setupCloudIdentityHandler(server, toolName, clientMethods)
     '../../tools/index.js',
     {},
     {
-      '../../lib/api/real_cloud_identity_client.js': {
-        RealCloudIdentityClient: MockCloudIdentityClient,
+      '../../lib/api/cloud_identity_client.js': {
+        CloudIdentityClient: MockCloudIdentityClient,
       },
     },
   )

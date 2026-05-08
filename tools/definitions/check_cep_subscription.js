@@ -27,7 +27,7 @@ import { logger } from '../../lib/util/logger.js'
  * Registers the 'check_cep_subscription' tool with the MCP server.
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server - The MCP server instance.
  * @param {object} options - Configuration options for the tool.
- * @param {import('../../lib/api/interfaces/admin_sdk_client.js').AdminSdkClient} options.adminSdkClient - The Admin SDK client instance.
+ * @param {import('../../lib/api/admin_sdk_client.js').AdminSdkClient} options.adminSdkClient - The Admin SDK client instance.
  * @param {object} sessionState - The session state object for caching.
  * @returns {void}
  */

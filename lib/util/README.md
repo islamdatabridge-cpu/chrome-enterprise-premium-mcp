@@ -39,9 +39,6 @@ logging, retry, GCP detection, CEL validation, and feature flags.
   `CredentialProbe` typedef is the shared shape across credential
   factories (ADC, OAuth-flow, bearer); `buildScopesField` consumes it.
 
-- `google-auth-provider.js`: production auth provider class. Wraps
-  `getAuthClient` for use by real API clients.
-
 **Credential factories** (`credential/`)
 
 - `adc.js`: `adcCredential()`. Probe sequence: ADC, then tokeninfo,

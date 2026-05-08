@@ -18,7 +18,7 @@ import assert from 'node:assert/strict'
 import { describe, test, mock } from 'node:test'
 import esmock from 'esmock'
 
-describe('RealChromePolicyClient', () => {
+describe('ChromePolicyClient', () => {
   test('When resolvePolicy is called, then it returns resolved policies from the API', async () => {
     const mockResolve = mock.fn(async () => ({
       data: {
@@ -26,7 +26,7 @@ describe('RealChromePolicyClient', () => {
       },
     }))
 
-    const { RealChromePolicyClient: MockedClient } = await esmock('../../lib/api/real_chrome_policy_client.js', {
+    const { ChromePolicyClient: MockedClient } = await esmock('../../lib/api/chrome_policy_client.js', {
       googleapis: {
         google: {
           chromepolicy: () => ({
@@ -58,7 +58,7 @@ describe('RealChromePolicyClient', () => {
       throw error
     })
 
-    const { RealChromePolicyClient: MockedClient } = await esmock('../../lib/api/real_chrome_policy_client.js', {
+    const { ChromePolicyClient: MockedClient } = await esmock('../../lib/api/chrome_policy_client.js', {
       googleapis: {
         google: {
           chromepolicy: () => ({
@@ -83,7 +83,7 @@ describe('RealChromePolicyClient', () => {
       data: { status: 'success' },
     }))
 
-    const { RealChromePolicyClient: MockedClient } = await esmock('../../lib/api/real_chrome_policy_client.js', {
+    const { ChromePolicyClient: MockedClient } = await esmock('../../lib/api/chrome_policy_client.js', {
       googleapis: {
         google: {
           chromepolicy: () => ({

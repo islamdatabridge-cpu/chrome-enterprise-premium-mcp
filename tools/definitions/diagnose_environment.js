@@ -28,7 +28,7 @@ import { z } from 'zod'
 import { guardedToolCall, formatToolResponse } from '../utils/wrapper.js'
 import { TAGS, CONNECTOR_DISPLAY_NAMES } from '../../lib/constants.js'
 import { logger } from '../../lib/util/logger.js'
-import { ConnectorPolicyFilter } from '../../lib/api/real_chrome_policy_client.js'
+import { ConnectorPolicyFilter } from '../../lib/api/chrome_policy_client.js'
 import { CHROME_ACTION_TYPES } from '../../lib/util/chrome_dlp_constants.js'
 import { analyzeConnectorPolicy } from '../../lib/util/connector_policy_helper.js'
 
@@ -164,10 +164,10 @@ function classifyAction(action) {
 /**
  * Fetches all environment data and returns raw collections for
  * both summary computation and detail pagination.
- * @param {import('../../lib/api/interfaces/admin_sdk_client.js').AdminSdkClient} adminSdkClient - Client for customer, org unit, and license data
- * @param {import('../../lib/api/interfaces/chrome_management_client.js').ChromeManagementClient} chromeManagementClient - Client for browser and device telemetry
- * @param {import('../../lib/api/interfaces/chrome_policy_client.js').ChromePolicyClient} chromePolicyClient - Client for verifying connector and extension policies
- * @param {import('../../lib/api/interfaces/cloud_identity_client.js').CloudIdentityClient} cloudIdentityClient - Client for listing DLP rules and detectors
+ * @param {import('../../lib/api/admin_sdk_client.js').AdminSdkClient} adminSdkClient - Client for customer, org unit, and license data
+ * @param {import('../../lib/api/chrome_management_client.js').ChromeManagementClient} chromeManagementClient - Client for browser and device telemetry
+ * @param {import('../../lib/api/chrome_policy_client.js').ChromePolicyClient} chromePolicyClient - Client for verifying connector and extension policies
+ * @param {import('../../lib/api/cloud_identity_client.js').CloudIdentityClient} cloudIdentityClient - Client for listing DLP rules and detectors
  * @param {string} customerId - The Chrome customer ID used for scoping requests
  * @param {string} authToken - The Bearer token for authorized API access
  * @returns {Promise<object>} A consolidated object containing raw data from all services

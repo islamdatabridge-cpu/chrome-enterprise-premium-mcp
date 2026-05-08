@@ -55,8 +55,8 @@ describe('Extension Tools', () => {
       '../../tools/index.js',
       {},
       {
-        '../../lib/api/real_chrome_policy_client.js': {
-          RealChromePolicyClient: MockChromePolicyClient,
+        '../../lib/api/chrome_policy_client.js': {
+          ChromePolicyClient: MockChromePolicyClient,
         },
       },
     )
@@ -87,8 +87,8 @@ describe('Extension Tools', () => {
       '../../tools/index.js',
       {},
       {
-        '../../lib/api/real_chrome_policy_client.js': {
-          RealChromePolicyClient: MockChromePolicyClient,
+        '../../lib/api/chrome_policy_client.js': {
+          ChromePolicyClient: MockChromePolicyClient,
         },
       },
     )
@@ -132,8 +132,8 @@ describe('Extension Tools', () => {
       '../../tools/index.js',
       {},
       {
-        '../../lib/api/real_chrome_policy_client.js': {
-          RealChromePolicyClient: MockChromePolicyClient,
+        '../../lib/api/chrome_policy_client.js': {
+          ChromePolicyClient: MockChromePolicyClient,
         },
       },
     )
@@ -166,8 +166,8 @@ describe('Extension Tools', () => {
       '../../tools/index.js',
       {},
       {
-        '../../lib/api/real_chrome_policy_client.js': {
-          RealChromePolicyClient: MockChromePolicyClient,
+        '../../lib/api/chrome_policy_client.js': {
+          ChromePolicyClient: MockChromePolicyClient,
         },
       },
     )

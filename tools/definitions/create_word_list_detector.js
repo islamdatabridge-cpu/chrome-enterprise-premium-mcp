@@ -31,7 +31,7 @@ import { commonInputSchemas, commonOutputSchemas } from './shared.js'
  * Registers the 'create_word_list_detector' tool with the MCP server.
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server - The MCP server instance.
  * @param {object} options - Configuration options for the tool.
- * @param {import('../../lib/api/interfaces/cloud_identity_client.js').CloudIdentityClient} options.cloudIdentityClient - The Cloud Identity client instance.
+ * @param {import('../../lib/api/cloud_identity_client.js').CloudIdentityClient} options.cloudIdentityClient - The Cloud Identity client instance.
  * @param {object} options.apiClients - The API clients collection.
  * @param {object} sessionState - The session state object for caching.
  * @returns {void}

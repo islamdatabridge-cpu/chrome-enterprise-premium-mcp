@@ -39,7 +39,6 @@ area:security:
       - any-glob-to-any-file:
           - 'lib/util/auth*.js'
           - 'lib/util/gcp.js'
-          - 'lib/util/google-auth-provider.js'
           - 'lib/util/cel_validator.js'
           - 'lib/util/feature_flags.js'
           - 'tools/utils/wrapper.js'

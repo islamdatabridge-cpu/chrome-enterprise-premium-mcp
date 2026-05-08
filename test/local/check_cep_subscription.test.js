@@ -17,7 +17,7 @@ limitations under the License.
 import assert from 'node:assert/strict'
 import { describe, test, mock, beforeEach } from 'node:test'
 import esmock from 'esmock'
-import { RealAdminSdkClient } from '../../lib/api/real_admin_sdk_client.js'
+import { AdminSdkClient } from '../../lib/api/admin_sdk_client.js'
 
 describe('check_cep_subscription Tool', () => {
   let server
@@ -43,8 +43,8 @@ describe('check_cep_subscription Tool', () => {
       '../../tools/index.js',
       {},
       {
-        '../../lib/api/real_admin_sdk_client.js': {
-          RealAdminSdkClient: MockAdminSdkClient,
+        '../../lib/api/admin_sdk_client.js': {
+          AdminSdkClient: MockAdminSdkClient,
         },
       },
     )
@@ -80,8 +80,8 @@ describe('check_cep_subscription Tool', () => {
       '../../tools/index.js',
       {},
       {
-        '../../lib/api/real_admin_sdk_client.js': {
-          RealAdminSdkClient: MockAdminSdkClient,
+        '../../lib/api/admin_sdk_client.js': {
+          AdminSdkClient: MockAdminSdkClient,
         },
       },
     )
@@ -121,8 +121,8 @@ describe('check_cep_subscription Tool', () => {
       '../../tools/index.js',
       {},
       {
-        '../../lib/api/real_admin_sdk_client.js': {
-          RealAdminSdkClient: MockAdminSdkClient,
+        '../../lib/api/admin_sdk_client.js': {
+          AdminSdkClient: MockAdminSdkClient,
         },
       },
     )
@@ -161,8 +161,8 @@ describe('check_cep_subscription Tool', () => {
       '../../tools/index.js',
       {},
       {
-        '../../lib/api/real_admin_sdk_client.js': {
-          RealAdminSdkClient: MockAdminSdkClient,
+        '../../lib/api/admin_sdk_client.js': {
+          AdminSdkClient: MockAdminSdkClient,
         },
       },
     )
@@ -181,10 +181,10 @@ describe('check_cep_subscription Tool', () => {
   })
 })
 
-describe('RealAdminSdkClient', () => {
+describe('AdminSdkClient', () => {
   describe('checkCepSubscription', () => {
     test('When CURRENT_CUSTOMER is used, then it resolves to actual customer ID before querying Licensing API', async () => {
-      const client = new RealAdminSdkClient()
+      const client = new AdminSdkClient()
 
       const mockListForProductAndSku = mock.fn(async () => {
         return { data: { items: [] } }
@@ -215,7 +215,7 @@ describe('RealAdminSdkClient', () => {
     })
 
     test('When provided customer ID is not my_customer, then it uses it directly without resolving', async () => {
-      const client = new RealAdminSdkClient()
+      const client = new AdminSdkClient()
 
       const mockListForProductAndSku = mock.fn(async () => {
         return { data: { items: [] } }

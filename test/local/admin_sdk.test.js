@@ -40,8 +40,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -76,8 +76,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -113,8 +113,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -150,8 +150,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -180,8 +180,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -217,8 +217,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -255,8 +255,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -290,8 +290,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
@@ -330,8 +330,8 @@ describe('Admin SDK API', () => {
         '../../tools/index.js',
         {},
         {
-          '../../lib/api/real_admin_sdk_client.js': {
-            RealAdminSdkClient: MockAdminSdkClient,
+          '../../lib/api/admin_sdk_client.js': {
+            AdminSdkClient: MockAdminSdkClient,
           },
         },
       )
