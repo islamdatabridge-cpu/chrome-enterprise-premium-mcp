@@ -23,6 +23,7 @@ lib/knowledge/10-chrome-policy-management.md
 lib/knowledge/11-dlp-rule-reference.doc.js
 lib/knowledge/12-security-posture-guide.md
 lib/knowledge/15-rule-quality-guidelines.md
+lib/knowledge/16-configurable-timeouts.md
 lib/knowledge/21-dlp-limits.md
 lib/knowledge/22-dlp-data-masking.md
 lib/knowledge/23-insider-risk-monitoring.md
