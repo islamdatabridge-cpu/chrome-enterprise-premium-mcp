@@ -83,4 +83,12 @@ describe('Knowledge Tools Real Database Integration', () => {
     const docText = docResult.content[0].text
     assert.ok(docText.includes('Deep scanning protection settings'), 'Should include exact UI path grounding')
   })
+
+  test('When searched for Evidence Locker paste, then search_content finds the evidence locker article', async () => {
+    const searchHandler = handlers['search_content']
+    const searchResult = await searchHandler({ query: 'Evidence Locker paste' }, { requestInfo: {} })
+    const documents = searchResult.structuredContent.documents
+    const article = documents.find(d => d.title.includes('Evidence Locker'))
+    assert.ok(article, 'Should find the Evidence Locker setup guide')
+  })
 })
