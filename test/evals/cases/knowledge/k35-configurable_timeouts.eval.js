@@ -25,5 +25,5 @@ export default {
   ],
   prompt: 'Can you walk me through the steps to set a time limit for paste action ?',
   goldenResponse:
-    'As an administrator with the Chrome Enterprise Security Services privilege and a Chrome Enterprise Premium subscription, you can set a timeout deadline for Data Loss Prevention (DLP) and malware scans, which includes the paste action, in the Google Admin console by navigating to Menu > Apps > Additional Google Services > Chrome Enterprise Security Services > Deep scanning protection settings. Click Edit, set the evaluation time limit in seconds, and save. Note that the analysis provider option is labeled exactly as Chrome Enterprise Premium.',
+    'As an administrator with the Chrome Enterprise Security Services privilege and a Chrome Enterprise Premium subscription, you can set a timeout deadline for Data Loss Prevention (DLP) and malware scans, which includes the paste action, in the Google Admin console by navigating to Menu > Apps > Additional Google Services > Chrome Enterprise Security Services > Deep scanning protection settings. Click Edit, set the evaluation time limit in seconds, and save.',
 }
