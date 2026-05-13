@@ -69,4 +69,18 @@ describe('Knowledge Tools Real Database Integration', () => {
 
     assert.ok(docText.includes('Chrome Enterprise Premium'), 'Full content should include the policy text')
   })
+
+  test('When searched for configurable timeouts, then search_content finds the dedicated article', async () => {
+    const searchHandler = handlers['search_content']
+    const getDocHandler = handlers['get_document']
+
+    const searchResult = await searchHandler({ query: 'timeout deadline' }, { requestInfo: {} })
+    const documents = searchResult.structuredContent.documents
+    const article = documents.find(d => d.title.includes('Configurable Timeout Deadlines'))
+    assert.ok(article, 'Should find the configurable timeouts article')
+
+    const docResult = await getDocHandler({ filename: article.filename }, { requestInfo: {} })
+    const docText = docResult.content[0].text
+    assert.ok(docText.includes('Deep scanning protection settings'), 'Should include exact UI path grounding')
+  })
 })
