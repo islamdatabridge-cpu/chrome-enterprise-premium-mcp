@@ -1,20 +1,26 @@
-name: Release
+name: release-please
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
 permissions:
   contents: write
   pull-requests: write
-concurrency:
-  group: release-please
-  cancel-in-progress: false
+
 jobs:
   release-please:
-    name: Release Please
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
-        id: release
+      - name: Generate Ephemeral GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
         with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          app-id: ${{ secrets.CEP_MCP_RELEASER_APP_ID }}
+          private-key: ${{ secrets.CEP_MCP_RELEASER }}
+
+      - name: Run Release Please
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
