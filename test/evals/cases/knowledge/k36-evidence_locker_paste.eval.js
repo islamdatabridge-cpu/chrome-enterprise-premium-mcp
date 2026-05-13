@@ -21,5 +21,5 @@ export default {
   requiredPatterns: ['Evidence Locker'],
   prompt: 'Can I use Evidence Locker to log pasted text or with a URL filtering rule?',
   goldenResponse:
-    'Evidence Locker is a Chrome Enterprise Premium feature used to capture and inspect files triggering security alerts by saving them to a GCS bucket. It works with DLP rules for File Uploads, File Downloads, and Printing. However, Evidence Locker cannot be used with standard URL filtering rules as they do not scan content, and it is explicitly not supported for content pasted actions to avoid storing sensitive data like accidentally pasted passwords.',
+    'Evidence Locker is a Chrome Enterprise Premium feature used to capture and inspect files triggering security alerts by saving them to a GCS bucket. It works with DLP rules for File Uploads, File Downloads, and Printing. However, Evidence Locker cannot be used with standard URL filtering rules as they do not scan content, and it is explicitly not supported for content pasted actions.',
 }
