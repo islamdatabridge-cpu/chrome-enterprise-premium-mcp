@@ -45,6 +45,7 @@ import { logger } from './lib/util/logger.js'
 import { printBanner, dim } from './lib/util/banner.js'
 import { buildScopesField, buildAuthRemediationLines, buildQuotaProjectWarning } from './lib/util/auth_messages.js'
 import { verifyIdToken, parseExpectedAudience } from './lib/util/credential/jwt_verifier.js'
+import { verifyBearerToken } from './lib/util/credential/bearer_verifier.js'
 import { TAGS, SCOPES } from './lib/constants.js'
 import { adcCredential } from './lib/util/credential/adc.js'
 
@@ -104,16 +105,17 @@ export function createSessionState() {
 
 /**
  * Builds the Express handler for POST /mcp. Each invocation constructs a fresh
- * per-request sessionState via createSessionState() and passes it to getServer,
- * so concurrent requests cannot share customerId/orgUnit cache.
+ * per-request sessionState via createSessionState() and passes it to getServer
+ * along with the verified principal from req.verifiedPrincipal, so concurrent
+ * requests cannot share customerId/orgUnit cache or principal context.
  * @param {object} gcpInfo - GCP environment metadata.
- * @param {(gcpInfo: object, sessionState: object) => Promise<object>} [getServerImpl] - Override for tests.
+ * @param {(gcpInfo: object, sessionState: object, principal: ?object) => Promise<object>} [getServerImpl] - Override for tests.
  * @returns {(req: import('express').Request, res: import('express').Response) => Promise<void>} The Express request handler.
  */
 export function createMcpPostHandler(gcpInfo, getServerImpl = getServer) {
   return async (req, res) => {
     const sessionState = createSessionState()
-    const server = await getServerImpl(gcpInfo, sessionState)
+    const server = await getServerImpl(gcpInfo, sessionState, req.verifiedPrincipal || null)
     try {
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
       await server.connect(transport)
@@ -143,18 +145,19 @@ export function createMcpPostHandler(gcpInfo, getServerImpl = getServer) {
 /**
  * Builds the Express handler for GET /sse. Each new SSE connection constructs
  * a fresh per-session sessionState; subsequent /messages POSTs route through
- * the registered transport, which holds a reference to that same server.
+ * the registered transport, which holds a reference to that same server. The
+ * verified principal from req.verifiedPrincipal is plumbed into getServer.
  * @param {object} gcpInfo - GCP environment metadata.
  * @param {Record<string, SSEServerTransport>} sseTransports - Map of sessionId -> transport.
- * @param {(gcpInfo: object, sessionState: object) => Promise<object>} [getServerImpl] - Override for tests.
+ * @param {(gcpInfo: object, sessionState: object, principal: ?object) => Promise<object>} [getServerImpl] - Override for tests.
  * @returns {(req: import('express').Request, res: import('express').Response) => Promise<void>} The Express request handler.
  */
 export function createSseHandler(gcpInfo, sseTransports, getServerImpl = getServer) {
-  return async (_req, res) => {
+  return async (req, res) => {
     logger.info(`${TAGS.MCP} /sse Received request`)
     try {
       const sessionState = createSessionState()
-      const server = await getServerImpl(gcpInfo, sessionState)
+      const server = await getServerImpl(gcpInfo, sessionState, req.verifiedPrincipal || null)
       const transport = new SSEServerTransport('/messages', res)
       sseTransports[transport.sessionId] = transport
       res.on('close', () => {
@@ -182,11 +185,12 @@ export function createSseHandler(gcpInfo, sseTransports, getServerImpl = getServ
 
 /**
  * Initializes and configures the MCP server instance.
- * @param {object} gcpInfo - The detected GCP environment metadata
- * @param {object} sharedSessionState - The shared session state for cross-request persistence
- * @returns {Promise<McpServer>} The configured MCP server instance
+ * @param {object} gcpInfo - The detected GCP environment metadata.
+ * @param {object} sharedSessionState - The shared session state for cross-request persistence.
+ * @param {?import('./lib/util/credential/jwt_verifier.js').VerifiedPrincipal} [principal] - The verified principal for this HTTP request, when present. Null in stdio mode and HTTP mode without CEP_BEARER_AUDIENCE.
+ * @returns {Promise<McpServer>} The configured MCP server instance.
  */
-export async function getServer(gcpInfo, sharedSessionState) {
+export async function getServer(gcpInfo, sharedSessionState, principal = null) {
   const server = new McpServer(
     {
       name: 'chrome-enterprise-premium',
@@ -215,6 +219,10 @@ export async function getServer(gcpInfo, sharedSessionState) {
     logger.info(`${TAGS.MCP} TEST MODE: Real API clients redirected to ${apiOptions.rootUrl}`)
   } else {
     logger.info(`${TAGS.MCP} Using REAL API clients.`)
+  }
+
+  if (principal) {
+    logger.debug(`${TAGS.MCP} Request authenticated as ${principal.email} (sub=${principal.sub})`)
   }
 
   const apiClients = {
@@ -330,6 +338,13 @@ export async function runServer() {
       app.use(express.json())
 
       const expectedAudience = parseExpectedAudience(process.env.CEP_BEARER_AUDIENCE)
+      const lockedSub = process.env.CEP_BEARER_PRINCIPAL_SUB || ''
+      if (lockedSub && !expectedAudience) {
+        logger.warn(
+          `${TAGS.MCP} CEP_BEARER_PRINCIPAL_SUB has no effect without CEP_BEARER_AUDIENCE.\n` +
+            `To lock the server to one user, set both: CEP_BEARER_AUDIENCE turns on bearer-token verification, and CEP_BEARER_PRINCIPAL_SUB narrows access to that user.`,
+        )
+      }
       if (expectedAudience) {
         // Trust-boundary middleware: every /mcp, /sse, /messages request must
         // carry a Google-signed ID token whose `aud` matches the expected
@@ -349,15 +364,21 @@ export async function runServer() {
             return
           }
           const token = auth.slice(7).trim()
-          try {
-            const principal = await verifyIdToken(token, { expectedAudience })
-            // eslint-disable-next-line require-atomic-updates
-            req.verifiedPrincipal = principal
-            next()
-          } catch (err) {
-            logger.warn(`${TAGS.MCP} ID-token verification failed: ${err.message}`)
-            res.status(401).json({ error: 'Bearer token verification failed' })
+          const result = await verifyBearerToken(token, { expectedAudience, lockedSub, verify: verifyIdToken })
+          if (!result.ok) {
+            if (result.status === 403) {
+              logger.warn(
+                `${TAGS.MCP} Principal sub ${result.principal.sub} does not match CEP_BEARER_PRINCIPAL_SUB; rejecting`,
+              )
+            } else if (result.error) {
+              logger.warn(`${TAGS.MCP} ID-token verification failed: ${result.error.message}`)
+            }
+            res.status(result.status).json({ error: result.message })
+            return
           }
+          // eslint-disable-next-line require-atomic-updates
+          req.verifiedPrincipal = result.principal
+          next()
         })
       } else {
         logger.warn(
