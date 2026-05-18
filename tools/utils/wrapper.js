@@ -18,14 +18,12 @@ limitations under the License.
  * @file Wrapper utilities to guard and transform MCP tool calls.
  */
 
-import { TAGS } from '../../lib/constants.js'
+import { TAGS, SCOPES } from '../../lib/constants.js'
 import { logger } from '../../lib/util/logger.js'
 import { validateAndGetOrgUnitId } from './org-unit.js'
-import { isTokenLocallyValid } from '../../lib/util/credential/auth_login.js'
+import { isTokenLocallyValid, canLaunchBrowser } from '../../lib/util/credential/auth_login.js'
 
 const MANUAL_AUTH_COMMAND = 'npx -y @google/chrome-enterprise-premium-mcp@latest auth login'
-const AUTH_DOCS_URL =
-  'https://github.com/google/chrome-enterprise-premium-mcp/blob/main/docs/configuration.md#authenticate-to-google-apis'
 
 /**
  * Builds an MCP tool response signalling that sign-in is needed before any tool can run.
@@ -33,32 +31,35 @@ const AUTH_DOCS_URL =
  * @returns {object} MCP tool response with isError: true.
  */
 function buildAuthRequiredResponse({ reason, expiresAt }) {
-  const reasonLabel = reason === 'expired' ? 'expired' : reason === 'malformed' ? 'unreadable' : 'missing'
+  const reasonLabel =
+    {
+      expired: 'expired',
+      malformed: 'unreadable',
+      insufficient: 'insufficient',
+    }[reason] || 'missing'
   const expiredAtNote = reason === 'expired' && expiresAt ? ` (expired at ${expiresAt.toISOString()})` : ''
   const text =
     `Sign-in is needed before this tool can run. The cached OAuth token is ${reasonLabel}${expiredAtNote}. ` +
     'I can run the `cep_auth` tool to sign you in, or you can run ' +
     `\`${MANUAL_AUTH_COMMAND}\` yourself.`
+
   return {
     content: [{ type: 'text', text }],
-    structuredContent: {
-      authRequired: {
-        reason,
-        expiresAt: expiresAt instanceof Date ? expiresAt.toISOString() : undefined,
-        nextAction: 'invoke-cep_auth',
-        manualCommand: MANUAL_AUTH_COMMAND,
-        docsUrl: AUTH_DOCS_URL,
-      },
-    },
+    // We return this as a standard unstructured error to bypass the following SDK bugs:
+    // 1. MCP Server SDK Crash: serialization fails for z.union() or non-object outputSchema
+    //    (TypeError: Cannot read properties of undefined reading '_zod') during init.
+    // 2. MCP Client (Gemini CLI) Rigid Validation: structuredContent is validated against
+    //    the success schema even when isError: true is set, causing client-side crashes.
+    // By using unstructured text, we keep data schemas strict while maintaining agent utility.
     isError: true,
   }
 }
 
 /**
  * Generates a proactive remediation message for authentication errors.
- * @param {number} status - The HTTP status code.
- * @param {boolean} [bearerInbound] - Whether the request arrived with an inbound Bearer token (HTTP transport).
- * @returns {string} The remediation message.
+ * @param {number} status - HTTP status code (401 or 403)
+ * @param {boolean} bearerInbound - True if request used inbound Bearer auth
+ * @returns {string} Human-readable remediation instructions
  */
 function getAuthRemediationMessage(status, bearerInbound = false) {
   if (bearerInbound) {
@@ -78,13 +79,14 @@ function getAuthRemediationMessage(status, bearerInbound = false) {
   return `Permission denied. Your account lacks the required permissions or the necessary Google Cloud APIs are not enabled.
 
 1. **Re-authenticate with all required scopes:** Run the \`cep_auth\` tool, or run \`mcp auth login\` at the shell, to re-consent. The required scope set is defined in lib/constants.js#SCOPES.
-2. **Verify APIs are enabled:** Run the \`check_and_enable_cep_api\` tool against your project, or enable the API set listed in lib/constants.js#SERVICE_NAMES.`
+2. **Verify APIs are enabled:** Run the \`check_and_enable_cep_api\` tool against your project, or enable the API set listed in lib/constants.js#SERVICE_NAMES.
+`
 }
 
 /**
- * Extracts the authentication token from the request headers.
- * @param {object} requestInfo - The request context object
- * @returns {string|null} The Bearer token if present, otherwise null
+ * Extracts bearer token from request info if present
+ * @param {object} [requestInfo] - Inbound MCP request metadata
+ * @returns {string|null} Bearer token string or null
  */
 function getAuthToken(requestInfo) {
   return requestInfo?.headers?.authorization ? requestInfo.headers.authorization.split(' ')[1] : null
@@ -150,6 +152,7 @@ export function safeFormatResponse({ rawData, formatFn, toolName }) {
  * @param {(...args: unknown[]) => unknown} [toolDef.transform] - Optional parameter transformation function
  * @param {(...args: unknown[]) => unknown} toolDef.handler - The main tool handler function
  * @param {boolean} [toolDef.skipAutoResolve] - Whether to skip auto-resolving customerId
+ * @param {string[]} [toolDef.scopes] - Scopes required for this tool. Defaults to all SCOPES.
  * @param {object} options - Configuration options for the wrapper
  * @param {object} [options.apiClients] - Collection of API clients
  * @param {object} [options.apiOptions] - Additional API options
@@ -158,20 +161,34 @@ export function safeFormatResponse({ rawData, formatFn, toolName }) {
  * @returns {(...args: unknown[]) => unknown} The wrapped tool handler function
  */
 export function guardedToolCall(
-  { validate, transform, handler, skipAutoResolve = false },
+  { validate, transform, handler, skipAutoResolve = false, scopes = Object.values(SCOPES) },
   options = {},
   sessionState = { customerId: null, cachedRootOrgUnitId: null },
 ) {
   return async (params, context) => {
     const authToken = getAuthToken(context?.requestInfo)
     if (!authToken) {
-      const validity = await isTokenLocallyValid()
-      if (!validity.ok) {
+      const validity = await isTokenLocallyValid({ scopes })
+      if (!validity.ok && !canLaunchBrowser()) {
         return buildAuthRequiredResponse(validity)
       }
     }
     try {
-      const { apiClients, apiOptions } = options
+      let apiOptions = options.apiOptions || {}
+      if (options.server && !apiOptions.onStatusUpdate) {
+        const server = options.server
+        const onStatusUpdate = msg => {
+          try {
+            if (typeof server?.sendLoggingMessage === 'function') {
+              server.sendLoggingMessage({ level: 'info', data: msg }).catch(() => {})
+            }
+          } catch {
+            // ignore
+          }
+        }
+        apiOptions = { ...apiOptions, onStatusUpdate }
+      }
+      const { apiClients } = options
       let currentParams = { ...params }
       if (sessionState && currentParams.customerId) {
         sessionState.customerId = currentParams.customerId
